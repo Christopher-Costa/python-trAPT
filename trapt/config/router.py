@@ -12,14 +12,14 @@ class Router(config.json.Json):
         self.route_table = {}
         self.interfaces = {}
 
-        self.trapt.logger.logger.info("Loading routing configuration")
+        self.trapt.logger['app'].logger.info("Loading routing configuration")
         config.json.Json.__init__(self, trapt, trapt.arguments.routers)
-        self.trapt.logger.logger.info("Complete")
+        self.trapt.logger['app'].logger.info("Complete")
 
-        self.trapt.logger.logger.info("Building route table...")
+        self.trapt.logger['app'].logger.info("Building route table...")
         self.build_interface_table()
         self.build_route_table()
-        self.trapt.logger.logger.info("Complete")
+        self.trapt.logger['app'].logger.info("Complete")
 
     def validate_config(self):
         """
@@ -71,7 +71,7 @@ class Router(config.json.Json):
 
         if errors:
             for error in errors:
-                self.trapt.logger.logger.error('Error validating router config: {0}'.format(error))
+                self.trapt.logger['app'].logger.error('Error validating router config: {0}'.format(error))
             sys.exit()
 
     def build_interface_table(self):
@@ -126,6 +126,6 @@ class Router(config.json.Json):
 
         if errors:
             for error in errors:
-                self.trapt.logger.logger.error('Error building route table: {0}'.format(error))
+                self.trapt.logger['app'].logger.error('Error building route table: {0}'.format(error))
             sys.exit()
                 

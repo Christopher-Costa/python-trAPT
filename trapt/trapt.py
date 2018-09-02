@@ -1,6 +1,7 @@
 import argparse
 import core.receiver
-import core.logger
+import logger.app
+import logger.network
 import config.main
 import config.router
 import config.host
@@ -14,7 +15,9 @@ class TrAPT():
         self.config = {}
         self.config['main'] = config.main.Main(self)
 
-        self.logger = core.logger.Logger(self)
+        self.logger= {}
+        self.logger['app'] = logger.app.App(self)
+        self.logger['network'] = logger.network.Network(self)
 
         self.config['router'] = config.router.Router(self)
         self.config['host'] = config.host.Host(self)        

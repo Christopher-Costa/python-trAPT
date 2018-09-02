@@ -14,7 +14,7 @@ class Json():
             with open(self.config_file) as config_file:
                 self.config = json.load(config_file)
         except ValueError as error:
-            self.trapt.logger.logger.error("Unable to load configuration from {0}: {1}".format(self.config_file, error))
+            self.trapt.logger['app'].logger.error("Unable to load configuration from {0}: {1}".format(self.config_file, error))
             sys.exit()  
 
     def validate_config(self):

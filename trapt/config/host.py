@@ -8,9 +8,9 @@ class Host(config.json.Json):
     def __init__(self, trapt):
         self.trapt = trapt
 
-        self.trapt.logger.logger.info("Loading host configuration...")
+        self.trapt.logger['app'].logger.info("Loading host configuration...")
         config.json.Json.__init__(self, trapt, trapt.arguments.hosts)
-        self.trapt.logger.logger.info("Loading complete...")
+        self.trapt.logger['app'].logger.info("Loading complete...")
 
     def validate_config(self):
         """
@@ -55,5 +55,5 @@ class Host(config.json.Json):
 
         if errors:
             for error in errors:
-                self.trapt.logger.logger.error('Error in host config: {0}'.format(error))
+                self.trapt.logger['app'].logger.error('Error in host config: {0}'.format(error))
             sys.exit()
