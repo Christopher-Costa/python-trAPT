@@ -79,6 +79,30 @@ class Router(config.json.Json):
                 error_message = 'route network "{0}" is not a valid IPv4 address.'
                 errors.append(error_message.format(upstream))
 
+            for protocol in ('tcp', 'udp'): 
+                if protocol in self.config[router]['ports']:
+                    for ports in self.config[router]['ports'][protocol]:
+                        if not tools.port.is_port(ports) and not tools.port.is_port_range(ports):
+                            error_message = '"{0}" is not a valid port or port range.'
+                            errors.append(error_message.format(ports))
+
+                        if not 'state' in self.config[router]['ports'][protocol][ports]:
+                            error_message = '"{0}" {1} port "{2}" definition missing "state".'
+                            errors.append(error_message.format(router, protocol, ports))
+                        elif not self.config[router]['ports'][protocol][ports]['state'] in ('open', 'blocked', 'reset'):
+                            error_message = '"{0}" {1} port state of {2} is invalid.'
+                            errors.append(error_message.format(router, protocol, self.config[router][protocol]))
+        
+            for protocol in ('icmp'):
+                if protocol in self.config[router]:
+                    if not 'state' in self.config[router]['ports'][protocol]:
+                        error_message = '"{0}" icmp port definition missing "state".'
+                        errors.append(error_message.format(router))
+                    elif not self.config[router][protocol]['ports'][protocol]['state'] in ('open', 'blocked'):
+                        error_message = '"{0}" icmp port state of {1} is invalid.'
+                        errors.append(error_message.format(router, self.config[router][protocol]))
+
+
         if errors:
             for error in errors:
                 error_message ='Error validating router config: {0}'

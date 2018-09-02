@@ -56,11 +56,31 @@ class Host(config.json.Json):
                     not gateway == '0.0.0.0'):
                 error_message = 'gateway "{0}" does not exist in router configuration.'
                 errors.append(error_message.format(gateway))
-           
-            for ports in self.config[hosts]['ports']:
-                if not tools.port.is_port(ports) and not tools.port.is_port_range(ports):
-                    error_message = '"{0}" is not a valid port or port range.'
-                    errors.append(error_message.format(ports))
+          
+            for protocol in ('tcp', 'udp'): 
+                if protocol in self.config[hosts]['ports']:
+                    for ports in self.config[hosts]['ports'][protocol]:
+                        if not tools.port.is_port(ports) and not tools.port.is_port_range(ports):
+                            error_message = '"{0}" is not a valid port or port range.'
+                            errors.append(error_message.format(ports))
+
+                        if not 'state' in self.config[hosts]['ports'][protocol][ports]:
+                            error_message = '"{0}" {1} port "{2}" definition missing "state".'
+                            errors.append(error_message.format(hosts, protocol, ports))
+                        elif not self.config[hosts]['ports'][protocol][ports]['state'] in ('open', 'blocked', 'reset'):
+                            error_message = '"{0}" {1} port state of {2} is invalid.'
+                            errors.append(error_message.format(hosts, protocol, self.config[hosts][protocol]))
+        
+            for protocol in ('icmp'):
+                if protocol in self.config[hosts]:
+                    if not 'state' in self.config[hosts]['ports'][protocol]:
+                        error_message = '"{0}" icmp port definition missing "state".'
+                        errors.append(error_message.format(hosts))
+                    elif not self.config[hosts][protocol]['ports'][protocol]['state'] in ('open', 'blocked'):
+                        error_message = '"{0}" icmp port state of {1} is invalid.'
+                        errors.append(error_message.format(hosts, self.config[hosts][protocol]))
+                        
+                       
 
         if errors:
             for error in errors:
