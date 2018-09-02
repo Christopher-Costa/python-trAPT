@@ -7,12 +7,13 @@ import sys
 
 class Router(config.json.Json):
 
-    def __init__(self, config_file):
+    def __init__(self, trapt):
+        self.trapt = trapt
         self.route_table = {}
         self.interfaces = {}
 
         print("Loading routing configuration...")
-        config.json.Json.__init__(self, config_file)
+        config.json.Json.__init__(self, trapt.arguments.routers)
         print("Complete...")
 
         print("Building route table...")

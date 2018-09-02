@@ -5,11 +5,11 @@ import sys
 
 class Host(config.json.Json):
 
-    def __init__(self, config_file, router_config):
-        self.router_config = router_config
+    def __init__(self, trapt):
+        self.trapt = trapt
 
         print("Loading host configuration...")
-        config.json.Json.__init__(self, config_file)
+        config.json.Json.__init__(self, trapt.arguments.hosts)
         print("Loading complete...")
 
     def validate_config(self):
@@ -46,7 +46,7 @@ class Host(config.json.Json):
             if not tools.ip.is_ipv4_address(gateway):
                 errors.append('gateway "{0}" is not a valid IPv4 address.'.format(gateway))
 
-            if not gateway in self.router_config.interfaces:
+            if not gateway in self.trapt.config['router'].interfaces:
                 errors.append('gateway "{0}" does not exist in router configuration.'.format(gateway))
            
             for ports in self.config[hosts]['ports']:
