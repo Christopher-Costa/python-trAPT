@@ -1,4 +1,4 @@
-trAPT: python based deception network environment
+trAPT:  Python based Deception Network environment for Linux
 ========
 
 trAPT emulates a network of routers and endpoints and uses scapy to spoof network activity, with configurable options for how to handle TCP, UDP, and ICMP network traffic. 
