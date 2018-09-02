@@ -18,20 +18,87 @@ class Icmp():
         or invoking other handlers.
         """
 
-        src_ip = self.frame[scapy.all.IP].src
-        dst_ip = self.frame[scapy.all.IP].dst
-        icmp_id = self.frame[scapy.all.ICMP].id
-        icmp_seq = self.frame[scapy.all.ICMP].seq
-        payload = self.frame[scapy.all.Raw].load
-        
-        if self.frame[scapy.all.ICMP].type == self.TYPE_ECHO_REQUEST:
-            reply = {}
-            reply['IP'] = scapy.all.IP(src=dst_ip
-                                        , dst = src_ip)            
-            reply['ICMP'] = scapy.all.ICMP(type=self.TYPE_ECHO_REPLY
-                                            , code=0
-                                            , id=icmp_id
-                                            , seq=icmp_seq)
+        self.src_ip = self.frame[scapy.all.IP].src
+        self.dst_ip = self.frame[scapy.all.IP].dst
+        self.icmp_id = self.frame[scapy.all.ICMP].id
+        self.icmp_seq = self.frame[scapy.all.ICMP].seq
+        self.icmp_type = self.frame[scapy.all.ICMP].type
+        self.icmp_code = self.frame[scapy.all.ICMP].code
+        self.payload = self.frame[scapy.all.Raw].load
 
-            icmp_reply = reply['IP']/reply['ICMP']/scapy.all.Raw(payload)
-            self.trapt.transmitter.enqueue(icmp_reply)
+        self.log_packet(self.icmp_type, self.icmp_code
+                        , self.icmp_id, self.icmp_seq, 'received'
+                        , self.src_ip, self.dst_ip)
+
+        if self.is_echo_request():
+            if self.should_reply():
+                packet = {}
+                packet['IP'] = scapy.all.IP(src = self.dst_ip
+                                            , dst = self.src_ip) 
+
+                packet['ICMP'] = scapy.all.ICMP(type = 0
+                                                , code = 0
+                                                , id = self.icmp_id
+                                                , seq = self.icmp_seq)
+
+                self.log_packet("0", "0"
+                                , self.icmp_id, self.icmp_seq, 'sent'
+                                , self.dst_ip, self.src_ip)
+ 
+ 
+                icmp_reply = packet['IP']/packet['ICMP']/scapy.all.Raw(self.payload)
+                self.trapt.transmitter.enqueue(icmp_reply)
+
+    def is_echo_request(self):
+        """
+        Function to return whether or not the received frame is an 
+        ICMP Echo Request.
+        """
+
+        return str(self.icmp_type) == '8'
+
+    def is_echo_reply(self):
+        """
+        Function to return whether or not the received frame is an 
+        ICMP Echo Reply.
+        """
+
+        return str(self.icmp_type) == '0'
+
+    def should_reply(self):
+        """
+        Function to return whether or not trAPT should reply to 
+        the received frame via ICMP.  This is determined by 
+        checking the host and router interface tables.
+        """
+
+        for table in ('host', 'router'):
+            if self.dst_ip in self.trapt.config[table].interfaces:
+                return True
+        return False
+
+    def icmp_name(self, type, code):
+        """
+        Function to return the name of the ICMP message baced on the 
+        passed type and code parameters.
+        """
+
+        if str(type) == '0':
+            return "Echo Reply"
+        elif str(type) == '8':
+            return "Echo Request"
+        else:
+            return "Unknown"
+
+
+    def log_packet (self, type, code, id, seq, direction, src_ip, dst_ip):
+        """
+        Function to generate a log message to the trAPT network log message based
+        on provided parameters.
+        """
+
+        log_message = 'ICMP {0} {1}: {2} -> {3}, id={4} seq={5}'.format(
+                self.icmp_name(type, code), direction, src_ip, dst_ip, id, seq)
+
+        self.trapt.logger['network'].logger.info(log_message)
+
