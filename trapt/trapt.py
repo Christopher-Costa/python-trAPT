@@ -1,5 +1,6 @@
 import argparse
 import core.receiver
+import core.transmitter
 import logger.app
 import logger.network
 import config.main
@@ -22,6 +23,7 @@ class TrAPT():
         self.config['router'] = config.router.Router(self)
         self.config['host'] = config.host.Host(self)        
 
+        self.transmitter = core.transmitter.Transmitter(self)
         self.receiver = core.receiver.Receiver(self)
         self.receiver.start()
 
