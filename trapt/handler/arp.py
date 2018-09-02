@@ -1,11 +1,10 @@
+import handler.handler
 import scapy.all
 
-class Arp():
+class Arp(handler.handler.Handler):
 
     def __init__(self, frame, trapt):
-        self.frame = frame
-        self.trapt = trapt
-
+        handler.handler.Handler.__init__(self, frame, trapt)
         self.handle()
 
     def handle(self):
@@ -32,6 +31,8 @@ class Arp():
 
         if self.is_arp_request():
             if self.should_reply():
+
+                latency = self.latency(self.arp_dst_ip)
                 reply_src_mac = '00:00:01:02:03:04'
                 packet = {}
                 packet['Ether'] = scapy.all.Ether(
@@ -49,7 +50,7 @@ class Arp():
                                 , self.arp_dst_ip, reply_src_mac
                                 , self.arp_src_ip, self.arp_src_mac)
                 arp_reply = packet['Ether']/packet['ARP']
-                self.trapt.transmitter.enqueue(arp_reply)
+                self.trapt.transmitter.enqueue({ 'frame' : arp_reply, 'latency' : latency })
 
     def should_reply(self):
         """
