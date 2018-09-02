@@ -14,6 +14,25 @@ def is_ipv4_address(ipv4_address):
     except ValueError:
         return False
 
+def is_ipv4_network(ipv4_network):
+    """
+    Helper function to return True if the string passed is a valid
+    IPv4 network, and False otherwise..  Acceptable formats are:
+
+        192.168.1.0/24
+        192.168.1.0/255.255.255.0
+        192.168.1.0/0.0.0.255
+    """
+
+    try:
+        if ipaddress.ip_network(ipv4_network):
+            return True
+        return False
+
+    except ValueError:
+        return False
+    
+
 def is_ipv4_range(ipv4_range):
     """
     Helper function to return True is the string passed is a valid range
@@ -23,12 +42,12 @@ def is_ipv4_range(ipv4_range):
     """
 
     ipv4_addresses = ipv4_range.split('-')
-
     if len(ipv4_addresses) != 2: 
         return False
 
     if is_ipv4_address(ipv4_addresses[0]) and is_ipv4_address(ipv4_addresses[-1]):
-        return True
+        if ipaddress.ip_address(ipv4_addresses[0]) < ipaddress.ip_address(ipv4_addresses[1]):
+            return True
     return False
 
 def ipv4_address_list(ipv4_range):
