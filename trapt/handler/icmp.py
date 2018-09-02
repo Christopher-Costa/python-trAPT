@@ -74,7 +74,16 @@ class Icmp():
 
         for table in ('host', 'router'):
             if self.dst_ip in self.trapt.config[table].interfaces:
-                return True
+                interfaces = self.trapt.config[table].interfaces[self.dst_ip]
+                if 'ports' in interfaces:
+                    if 'icmp' in interfaces['ports']:
+                        if 'state' in interfaces['ports']['icmp']:
+                            if interfaces['ports']['icmp']['state'] == 'open':
+                                return True
+                
+                if 'default_state' in interfaces:
+                    if interfaces['default_state'] == 'open':
+                        return True
         return False
 
     def icmp_name(self, type, code):
