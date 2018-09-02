@@ -1,5 +1,6 @@
 import scapy.all
 import queue
+import time
 import threading
 
 class Transmitter():
@@ -9,13 +10,13 @@ class Transmitter():
         self.interface = self.trapt.config['main'].settings['general']['interface']
         self.tx_queue = queue.Queue(maxsize=256)
 
-        self.worker = threading.Thread(target=self.process_queue, args=())
+        self.worker = threading.Thread(target=self.monitor_queue, args=())
         self.worker.setDaemon(True)
         self.worker.start()
 
         self.trapt.logger['app'].logger.info("Process started")
 
-    def process_queue(self):
+    def monitor_queue(self):
         """
         Worker thread function to process frames in the tx_queue 
         and send them on the wire. 
@@ -27,10 +28,7 @@ class Transmitter():
 
         while True:
             frame = self.tx_queue.get()
-            if frame.haslayer(scapy.all.Ether):
-                scapy.all.sendp(frame, iface=self.interface, verbose=False)
-            else:
-                scapy.all.send(frame, verbose=False)
+            self.dequeue(frame)
 
     def enqueue(self, frame):
         """
@@ -38,3 +36,10 @@ class Transmitter():
         """
 
         self.tx_queue.put(frame)
+
+    def dequeue(self, frame):
+        if frame.haslayer(scapy.all.Ether):
+            scapy.all.sendp(frame, iface=self.interface, verbose=False)
+        else:
+            scapy.all.send(frame, verbose=False)
+
