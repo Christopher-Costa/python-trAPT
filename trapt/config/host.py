@@ -46,7 +46,7 @@ class Host(config.json.Json):
             if not tools.ip.is_ipv4_address(gateway):
                 errors.append('gateway "{0}" is not a valid IPv4 address.'.format(gateway))
 
-            if not gateway in self.router_config.config:
+            if not gateway in self.router_config.interfaces:
                 errors.append('gateway "{0}" does not exist in router configuration.'.format(gateway))
            
             for ports in self.config[hosts]['ports']:
