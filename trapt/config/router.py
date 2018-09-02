@@ -35,7 +35,8 @@ class Router(config.json.Json):
                         { 
                             "network" : "<ip CIDR range or subnet>", 
                             "address" : "<local subnet address>", 
-                            "latency" : "<added latency in ms>"
+                            "latency" : "<added latency in ms>",
+                            "external" : "<0 or 1, optional>
                         },
                         ...
                     ],
@@ -55,23 +56,33 @@ class Router(config.json.Json):
                 network = link['network']
                 address = link['address']
                 latency = link['latency']
+                external = link['external'] if 'external' in link else 0
 
                 if not tools.ip.is_ipv4_network(network):
-                    errors.append('link network "{0}" is not a valid IPv4 network.'.format(network))
+                    error_message = 'link network "{0}" is not a valid IPv4 network.'
+                    errors.append(error_message.format(network))
 
                 if not tools.ip.is_ipv4_address(address):
-                    errors.append('link address "{0}" is not a valid IPv4 address.'.format(address))
+                    error_message = 'link address "{0}" is not a valid IPv4 address.' 
+                    errors.append(error_message.format(address))
 
                 if not (tools.number.is_integer(latency) and int(latency) > 0):
-                    errors.append('latency value "{0}" is not a postive integer.'.format(latency))
+                    error_message = 'latency value "{0}" is not a postive integer.'
+                    errors.append(error_message.format(latency))
+
+                if not (int(external) == 0 or int(external) == 1):
+                    error_message = 'external value "{0}" should be 0 or 1.'
+                    errors.append(error_message.format(external))
 
             upstream = self.config[router]['upstream']
             if not tools.ip.is_ipv4_network(upstream):
-                errors.append('route network "{0}" is not a valid IPv4 address.'.format(upstream))
+                error_message = 'route network "{0}" is not a valid IPv4 address.'
+                errors.append(error_message.format(upstream))
 
         if errors:
             for error in errors:
-                self.trapt.logger['app'].logger.error('Error validating router config: {0}'.format(error))
+                error_message ='Error validating router config: {0}'
+                self.trapt.logger['app'].logger.error(error_message.format(error))
             sys.exit()
 
     def build_interface_table(self):
@@ -89,7 +100,12 @@ class Router(config.json.Json):
                 address = link['address']
                 self.interfaces[address] = {}
                 self.interfaces[address]['upstream'] = upstream
+                self.interfaces[address]['network'] = link['network']
                 self.interfaces[address]['latency'] = int(link['latency'])
+                try:
+                    self.interfaces[address]['external'] = int(link['external'])
+                except KeyError:
+                    self.interfaces[address]['external'] = 0
         
     def build_route_table(self):
         """
@@ -101,31 +117,41 @@ class Router(config.json.Json):
         errors = []    
 
         for route in self.interfaces:
+            network = self.interfaces[route]['network']
             latency = self.interfaces[route]['latency']
             upstream = self.interfaces[route]['upstream']
+            external = self.interfaces[route]['external']
 
             recursions = 0
             while upstream != '0.0.0.0':
                 if recursions > 64:
-                    errors.append('Failed on upstream "{0}":  Too many recursions.'.format(upstream))
+                    error_message = 'Failed on upstream "{0}":  Too many recursions.'
+                    errors.append(error_message.format(upstream))
                     break
                 recursions += 1
 
                 try:
                     if upstream == self.interfaces[upstream]['upstream']:
-                        errors.append('upstream "{0}" references itself.'.format(upstream))
+                        error_message = 'upstream "{0}" references itself.'
+                        errors.append(error_message.format(upstream))
                         break
 
                     latency += self.interfaces[upstream]['latency']
                     upstream = self.interfaces[upstream]['upstream']
 
                 except KeyError:
-                    errors.append('Error with upstream "{0}":  No such router interface.'.format(upstream))
+                    error_message = 'Error with upstream "{0}":  No such router interface.'
+                    errors.append(error_message.format(upstream))
             
-        self.route_table[route] = latency
+            self.route_table[network] = {}
+            self.route_table[network]['latency'] = latency
+            self.route_table[network]['external'] = external
 
         if errors:
             for error in errors:
-                self.trapt.logger['app'].logger.error('Error building route table: {0}'.format(error))
+                error_message = 'Error building route table: {0}'
+                self.trapt.logger['app'].logger.error(error_message.format(error))
             sys.exit()
-                
+
+    def is_external(self, address):
+        return self.interfaces[address]['external']
