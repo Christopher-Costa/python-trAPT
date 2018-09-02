@@ -46,7 +46,7 @@ class Router(config.json.Json):
             }
 
         If problems are detected, Print an informative message 
-        and exit the program.  An upstream of "0.0.0.0" refers
+        and exit the program.  An upstream of a local interface refers
         to the physical monitored network.
         """
 
@@ -66,7 +66,7 @@ class Router(config.json.Json):
                     error_message = 'link address "{0}" is not a valid IPv4 address.' 
                     self.errors.append(error_message.format(address))
 
-                if not (tools.number.is_integer(latency) and int(latency) > 0):
+                if not (tools.number.is_integer(latency) and int(latency) >= 0):
                     error_message = 'latency value "{0}" is not a postive integer.'
                     self.errors.append(error_message.format(latency))
 
@@ -108,10 +108,6 @@ class Router(config.json.Json):
                 self.interfaces[address]['default_state'] = default_state
                 self.interfaces[address]['network'] = link['network']
                 self.interfaces[address]['latency'] = int(link['latency'])
-                try:
-                    self.interfaces[address]['external'] = int(link['external'])
-                except KeyError:
-                    self.interfaces[address]['external'] = 0
 
                 for protocol in ('tcp', 'udp'):
                     if protocol in ports:
@@ -144,10 +140,14 @@ class Router(config.json.Json):
             network = self.interfaces[route]['network']
             latency = self.interfaces[route]['latency']
             upstream = self.interfaces[route]['upstream']
-            external = self.interfaces[route]['external']
 
+            external = 1
             recursions = 0
-            while upstream != '0.0.0.0':
+            current = route
+            upstream = upstream
+            while current != upstream:
+                external = 0
+
                 if recursions > 64:
                     error_message = 'Failed on upstream "{0}":  Too many recursions.'
                     errors.append(error_message.format(upstream))
@@ -155,17 +155,14 @@ class Router(config.json.Json):
                 recursions += 1
 
                 try:
-                    if upstream == self.interfaces[upstream]['upstream']:
-                        error_message = 'upstream "{0}" references itself.'
-                        errors.append(error_message.format(upstream))
-                        break
-
-                    latency += self.interfaces[upstream]['latency']
-                    upstream = self.interfaces[upstream]['upstream']
+                    current = upstream
+                    upstream = self.interfaces[current]['upstream']
+                    latency += self.interfaces[current]['latency']
 
                 except KeyError:
                     error_message = 'Error with upstream "{0}":  No such router interface.'
                     errors.append(error_message.format(upstream))
+                    break
             
             self.route_table[network] = {}
             self.route_table[network]['latency'] = latency
@@ -178,4 +175,5 @@ class Router(config.json.Json):
             sys.exit()
 
     def is_external(self, address):
-        return self.interfaces[address]['external']
+        network = self.interfaces[address]['network']
+        return self.route_table[network]['external']
