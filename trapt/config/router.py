@@ -12,14 +12,14 @@ class Router(config.json.Json):
         self.route_table = {}
         self.interfaces = {}
 
-        print("Loading routing configuration...")
-        config.json.Json.__init__(self, trapt.arguments.routers)
-        print("Complete...")
+        self.trapt.logger.logger.info("Loading routing configuration")
+        config.json.Json.__init__(self, trapt, trapt.arguments.routers)
+        self.trapt.logger.logger.info("Complete")
 
-        print("Building route table...")
+        self.trapt.logger.logger.info("Building route table...")
         self.build_interface_table()
         self.build_route_table()
-        print("Complete...")
+        self.trapt.logger.logger.info("Complete")
 
     def validate_config(self):
         """
@@ -70,9 +70,8 @@ class Router(config.json.Json):
                 errors.append('route network "{0}" is not a valid IPv4 address.'.format(upstream))
 
         if errors:
-            print('Error validating router config:')
             for error in errors:
-                print('  ' + error)
+                self.trapt.logger.logger.error('Error validating router config: {0}'.format(error))
             sys.exit()
 
     def build_interface_table(self):
@@ -108,7 +107,7 @@ class Router(config.json.Json):
             recursions = 0
             while upstream != '0.0.0.0':
                 if recursions > 64:
-                    errors.append('Failed on upstream "{0}:  Too many recursions.'.format(upstream))
+                    errors.append('Failed on upstream "{0}":  Too many recursions.'.format(upstream))
                     break
                 recursions += 1
 
@@ -126,8 +125,7 @@ class Router(config.json.Json):
         self.route_table[route] = latency
 
         if errors:
-            print('Error building route table:')
             for error in errors:
-                print('  ' + error)
+                self.trapt.logger.logger.error('Error building route table: {0}'.format(error))
             sys.exit()
                 

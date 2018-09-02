@@ -20,7 +20,7 @@ class Receiver:
         matching the configured filter to the handler function.
         """
 
-        print("Starting capture on interface {0} ...".format(self.trapt.config['main'].interface))
+        self.trapt.logger.logger.info("Starting capture on interface {0}".format(self.trapt.config['main'].interface))
         sniff(prn = self.packet_handler
                 , store=0
                 , filter=self.trapt.config['main'].filter

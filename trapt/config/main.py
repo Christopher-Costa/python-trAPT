@@ -17,3 +17,13 @@ class Main():
             self.filter = cp.get('general', 'filter')
         except configparser.NoOptionError:
             self.filter = ''
+
+        try:
+            self.log_path = cp.get('logging', 'log_path')
+        except configparser.NoOptionError:
+            self.log_path = '/var/log/trapt'
+
+        try:
+            self.log_name = cp.get('logging', 'log_name')
+        except configparser.NoOptionError:
+            self.log_name = 'trapt.log'

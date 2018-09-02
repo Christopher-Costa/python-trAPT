@@ -1,5 +1,6 @@
 import argparse
 import core.receiver
+import core.logger
 import config.main
 import config.router
 import config.host
@@ -12,12 +13,14 @@ class TrAPT():
 
         self.config = {}
         self.config['main'] = config.main.Main(self)
+
+        self.logger = core.logger.Logger(self)
+
         self.config['router'] = config.router.Router(self)
         self.config['host'] = config.host.Host(self)        
 
         self.receiver = core.receiver.Receiver(self)
         self.receiver.start()
-        print('hello')
 
     def parse_arguments(self):
 

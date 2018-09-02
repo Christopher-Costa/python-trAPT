@@ -8,9 +8,9 @@ class Host(config.json.Json):
     def __init__(self, trapt):
         self.trapt = trapt
 
-        print("Loading host configuration...")
-        config.json.Json.__init__(self, trapt.arguments.hosts)
-        print("Loading complete...")
+        self.trapt.logger.logger.info("Loading host configuration...")
+        config.json.Json.__init__(self, trapt, trapt.arguments.hosts)
+        self.trapt.logger.logger.info("Loading complete...")
 
     def validate_config(self):
         """
@@ -54,7 +54,6 @@ class Host(config.json.Json):
                     errors.append('"{0}" is not a valid port or port range.'.format(ports))
 
         if errors:
-            print('Error validating host config:')
             for error in errors:
-                print('  ' + error)
+                self.trapt.logger.logger.error('Error in host config: {0}'.format(error))
             sys.exit()
