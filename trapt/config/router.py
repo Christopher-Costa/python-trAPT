@@ -50,7 +50,7 @@ class Router(config.json.Json):
         to the physical monitored network.
         """
 
-        errors = []
+        self.errors = []
         for router in self.config:
             for link in self.config[router]['links']:
                 network = link['network']
@@ -60,51 +60,29 @@ class Router(config.json.Json):
 
                 if not tools.ip.is_ipv4_network(network):
                     error_message = 'link network "{0}" is not a valid IPv4 network.'
-                    errors.append(error_message.format(network))
+                    self.errors.append(error_message.format(network))
 
                 if not tools.ip.is_ipv4_address(address):
                     error_message = 'link address "{0}" is not a valid IPv4 address.' 
-                    errors.append(error_message.format(address))
+                    self.errors.append(error_message.format(address))
 
                 if not (tools.number.is_integer(latency) and int(latency) > 0):
                     error_message = 'latency value "{0}" is not a postive integer.'
-                    errors.append(error_message.format(latency))
+                    self.errors.append(error_message.format(latency))
 
                 if not (int(external) == 0 or int(external) == 1):
                     error_message = 'external value "{0}" should be 0 or 1.'
-                    errors.append(error_message.format(external))
+                    self.errors.append(error_message.format(external))
 
             upstream = self.config[router]['upstream']
             if not tools.ip.is_ipv4_network(upstream):
                 error_message = 'route network "{0}" is not a valid IPv4 address.'
-                errors.append(error_message.format(upstream))
+                self.errors.append(error_message.format(upstream))
 
-            for protocol in ('tcp', 'udp'): 
-                if protocol in self.config[router]['ports']:
-                    for ports in self.config[router]['ports'][protocol]:
-                        if not tools.port.is_port(ports) and not tools.port.is_port_range(ports):
-                            error_message = '"{0}" is not a valid port or port range.'
-                            errors.append(error_message.format(ports))
+            self.validate_port_configuration(self.config[router]['ports'])
 
-                        if not 'state' in self.config[router]['ports'][protocol][ports]:
-                            error_message = '"{0}" {1} port "{2}" definition missing "state".'
-                            errors.append(error_message.format(router, protocol, ports))
-                        elif not self.config[router]['ports'][protocol][ports]['state'] in ('open', 'blocked', 'reset'):
-                            error_message = '"{0}" {1} port state of {2} is invalid.'
-                            errors.append(error_message.format(router, protocol, self.config[router][protocol]))
-        
-            for protocol in ('icmp'):
-                if protocol in self.config[router]:
-                    if not 'state' in self.config[router]['ports'][protocol]:
-                        error_message = '"{0}" icmp port definition missing "state".'
-                        errors.append(error_message.format(router))
-                    elif not self.config[router][protocol]['ports'][protocol]['state'] in ('open', 'blocked'):
-                        error_message = '"{0}" icmp port state of {1} is invalid.'
-                        errors.append(error_message.format(router, self.config[router][protocol]))
-
-
-        if errors:
-            for error in errors:
+        if self.errors:
+            for error in self.errors:
                 error_message ='Error validating router config: {0}'
                 self.trapt.logger['app'].logger.error(error_message.format(error))
             sys.exit()
@@ -118,18 +96,40 @@ class Router(config.json.Json):
         
         for router in self.config:
             links = self.config[router]['links']
+            ports = self.config[router]['ports']
             upstream = self.config[router]['upstream']
+            default_state = self.config[router]['default_state']
 
             for link in links:
                 address = link['address']
                 self.interfaces[address] = {}
+                self.interfaces[address]['ports'] = {}
                 self.interfaces[address]['upstream'] = upstream
+                self.interfaces[address]['default_state'] = default_state
                 self.interfaces[address]['network'] = link['network']
                 self.interfaces[address]['latency'] = int(link['latency'])
                 try:
                     self.interfaces[address]['external'] = int(link['external'])
                 except KeyError:
                     self.interfaces[address]['external'] = 0
+
+                for protocol in ('tcp', 'udp'):
+                    if protocol in ports:
+                        self.interfaces[address]['ports'][protocol] = {}
+
+                        for port_range in ports[protocol]:
+                            state = ports[protocol][port_range]['state']
+
+                            port_list = tools.port.port_list(port_range)
+                            for port in port_list:
+                                self.interfaces[address]['ports'][protocol][port] = {}
+                                self.interfaces[address]['ports'][protocol][port]['state'] = state
+
+                for protocol in ('icmp',):
+                    if protocol in ports:
+                        state = ports[protocol]['state']
+                        self.interfaces[address]['ports'][protocol] = {}
+                        self.interfaces[address]['ports'][protocol]['state'] = state
         
     def build_route_table(self):
         """

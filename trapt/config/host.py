@@ -40,49 +40,26 @@ class Host(config.json.Json):
         and exit the program.
         """
 
-        errors = []
+        self.errors = []
         for hosts in self.config:
             if (not tools.ip.is_ipv4_address(hosts) 
                     and not tools.ip.is_ipv4_range(hosts)):
                 error_message = 'host "{0}" is not a valid IPv4 address or IPv4 range.'
-                errors.append(error_message.format(hosts))
+                self.errors.append(error_message.format(hosts))
 
             gateway = self.config[hosts]['gateway']    
             if not tools.ip.is_ipv4_address(gateway):
                 error_message = 'gateway "{0}" is not a valid IPv4 address.'
-                errors.append(error_message.format(gateway))
+                self.errors.append(error_message.format(gateway))
 
             if (not gateway in self.trapt.config['router'].interfaces and
                     not gateway == '0.0.0.0'):
                 error_message = 'gateway "{0}" does not exist in router configuration.'
-                errors.append(error_message.format(gateway))
-          
-            for protocol in ('tcp', 'udp'): 
-                if protocol in self.config[hosts]['ports']:
-                    for ports in self.config[hosts]['ports'][protocol]:
-                        if not tools.port.is_port(ports) and not tools.port.is_port_range(ports):
-                            error_message = '"{0}" is not a valid port or port range.'
-                            errors.append(error_message.format(ports))
+                self.errors.append(error_message.format(gateway))
 
-                        if not 'state' in self.config[hosts]['ports'][protocol][ports]:
-                            error_message = '"{0}" {1} port "{2}" definition missing "state".'
-                            errors.append(error_message.format(hosts, protocol, ports))
-                        elif not self.config[hosts]['ports'][protocol][ports]['state'] in ('open', 'blocked', 'reset'):
-                            error_message = '"{0}" {1} port state of {2} is invalid.'
-                            errors.append(error_message.format(hosts, protocol, self.config[hosts][protocol]))
-        
-            for protocol in ('icmp'):
-                if protocol in self.config[hosts]:
-                    if not 'state' in self.config[hosts]['ports'][protocol]:
-                        error_message = '"{0}" icmp port definition missing "state".'
-                        errors.append(error_message.format(hosts))
-                    elif not self.config[hosts][protocol]['ports'][protocol]['state'] in ('open', 'blocked'):
-                        error_message = '"{0}" icmp port state of {1} is invalid.'
-                        errors.append(error_message.format(hosts, self.config[hosts][protocol]))
-                        
-                       
+            self.validate_port_configuration(self.config[hosts]['ports'])
 
-        if errors:
+        if self.errors:
             for error in errors:
                 error_message = 'Error in host config: {0}'
                 self.trapt.logger['app'].logger.error(error_message.format(error))
@@ -92,6 +69,8 @@ class Host(config.json.Json):
         self.interfaces = {}
         for hosts in self.config:
             gateway = self.config[hosts]['gateway']
+            default_state = self.config[hosts]['default_state']
+            ports = self.config[hosts]['ports']
             if gateway in self.trapt.config['router'].interfaces:
                 network = self.trapt.config['router'].interfaces[gateway]['network']
                 latency = self.trapt.config['router'].route_table[network]['latency']
@@ -108,8 +87,28 @@ class Host(config.json.Json):
 
             for host in tools.ip.ipv4_address_list(hosts):
                 self.interfaces[host] = {}
+                self.interfaces[host]['ports'] = {}
                 self.interfaces[host]['latency'] = latency
                 self.interfaces[host]['external'] = external
+                self.interfaces[host]['default_state'] = default_state
+
+                for protocol in ('tcp', 'udp'): 
+                    if protocol in ports:
+                        self.interfaces[host]['ports'][protocol] = {}
+
+                        for port_range in ports[protocol]:
+                            state = ports[protocol][port_range]['state']
+
+                            port_list = tools.port.port_list(port_range)
+                            for port in port_list:
+                                self.interfaces[host]['ports'][protocol][port] = {}
+                                self.interfaces[host]['ports'][protocol][port]['state'] = state 
+
+                for protocol in ('icmp',):
+                    if protocol in ports:
+                        state = ports[protocol]['state']
+                        self.interfaces[host]['ports'][protocol] = {}
+                        self.interfaces[host]['ports'][protocol]['state'] = state 
 
     def is_external(self, address):
         return self.interfaces[address]['external']
