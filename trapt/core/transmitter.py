@@ -31,7 +31,6 @@ class Transmitter():
             job = threading.Thread(target=self.dequeue, args=(item,))
             job.setDaemon(True)
             job.start()
-            #self.dequeue(frame)
 
     def enqueue(self, frame):
         """
