@@ -2,14 +2,23 @@ import config.json
 import tools.ip
 import tools.port
 import tools.number
+import ipaddress
 import sys
 
 class Router(config.json.Json):
 
     def __init__(self, config_file):
+        self.route_table = {}
+        self.interfaces = {}
+
         print("Loading routing configuration...")
         config.json.Json.__init__(self, config_file)
-        print("Loading complete...")
+        print("Complete...")
+
+        print("Building route table...")
+        self.build_interface_table()
+        self.build_route_table()
+        print("Complete...")
 
     def validate_config(self):
         """
@@ -29,19 +38,14 @@ class Router(config.json.Json):
                         },
                         ...
                     ],
-                    "routes": [
-                        { 
-                            "network" : "<CIDR range>" , 
-                            "next_hop" : "<next hop IP address>" 
-                        },
-                        ...
-                    ]
+                    "upstream" : "<next hop IP address>"
                 },
                 ...
             }
 
         If problems are detected, Print an informative message 
-        and exit the program.
+        and exit the program.  An upstream of "0.0.0.0" refers
+        to the physical monitored network.
         """
 
         errors = []
@@ -60,15 +64,9 @@ class Router(config.json.Json):
                 if not (tools.number.is_integer(latency) and int(latency) > 0):
                     errors.append('latency value "{0}" is not a postive integer.'.format(latency))
 
-            for route in self.config[router]['routes']:
-                network = route['network']
-                next_hop = route['next_hop']
-
-                if not tools.ip.is_ipv4_network(network):
-                    errors.append('route network "{0}" is not a valid IPv4 network.'.format(network))
-                
-                if not tools.ip.is_ipv4_address(next_hop):
-                    errors.append('next-hop address "{0}" is not a valid IPv4 address.'.format(next_hop))
+            upstream = self.config[router]['upstream']
+            if not tools.ip.is_ipv4_network(upstream):
+                errors.append('route network "{0}" is not a valid IPv4 address.'.format(upstream))
 
         if errors:
             print('Error validating router config:')
@@ -76,3 +74,59 @@ class Router(config.json.Json):
                 print('  ' + error)
             sys.exit()
 
+    def build_interface_table(self):
+        """
+        From the router config, assemble a table of all router interfaces,
+        upstreams, and interface latency.
+        
+        """
+        
+        for router in self.config:
+            links = self.config[router]['links']
+            upstream = self.config[router]['upstream']
+
+            for link in links:
+                address = link['address']
+                self.interfaces[address] = {}
+                self.interfaces[address]['upstream'] = upstream
+                self.interfaces[address]['latency'] = int(link['latency'])
+        
+    def build_route_table(self):
+        """
+        From the router config and router interface table build a table
+        of the cummulative latency of all interfaces and their path
+        to the outside.
+        """
+
+        errors = []    
+
+        for route in self.interfaces:
+            latency = self.interfaces[route]['latency']
+            upstream = self.interfaces[route]['upstream']
+
+            recursions = 0
+            while upstream != '0.0.0.0':
+                if recursions > 64:
+                    errors.append('Failed on upstream "{0}:  Too many recursions.'.format(upstream))
+                    break
+                recursions += 1
+
+                try:
+                    if upstream == self.interfaces[upstream]['upstream']:
+                        errors.append('upstream "{0}" references itself.'.format(upstream))
+                        break
+
+                    latency += self.interfaces[upstream]['latency']
+                    upstream = self.interfaces[upstream]['upstream']
+
+                except KeyError:
+                    errors.append('Error with upstream "{0}":  No such router interface.'.format(upstream))
+            
+        self.route_table[route] = latency
+
+        if errors:
+            print('Error building route table:')
+            for error in errors:
+                print('  ' + error)
+            sys.exit()
+                
