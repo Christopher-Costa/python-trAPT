@@ -5,14 +5,6 @@ class Icmp(handler.handler.Handler):
     
     def __init__(self, frame, trapt):
         handler.handler.Handler.__init__(self, frame, trapt)
-        self.handle()
-
-    def handle(self):
-        """
-        Function to process ICMP messages and handles accordingly.
-        Actions may include filtering, generate one or more response,
-        or invoking other handlers.
-        """
 
         self.src_ip = self.frame[scapy.all.IP].src
         self.dst_ip = self.frame[scapy.all.IP].dst
@@ -21,6 +13,15 @@ class Icmp(handler.handler.Handler):
         self.icmp_type = self.frame[scapy.all.ICMP].type
         self.icmp_code = self.frame[scapy.all.ICMP].code
         self.payload = self.frame[scapy.all.Raw].load
+
+        self.handle()
+
+    def handle(self):
+        """
+        Function to process ICMP messages and handles accordingly.
+        Actions may include filtering, generate one or more response,
+        or invoking other handlers.
+        """
 
         self.log_packet(self.icmp_type, self.icmp_code
                         , self.icmp_id, self.icmp_seq, 'received'
@@ -107,4 +108,3 @@ class Icmp(handler.handler.Handler):
                 self.icmp_name(type, code), direction, src_ip, dst_ip, id, seq)
 
         self.trapt.logger['network'].logger.info(log_message)
-
