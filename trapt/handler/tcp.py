@@ -87,6 +87,9 @@ class Tcp(handler.handler.Handler):
         tcp_reply = packet['IP']/packet['TCP']
         self.trapt.transmitter.enqueue({ 'frame' : tcp_reply, 'latency' : latency })
 
+        self.log_packet('received', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+                        , 'SA', self.tcp_snd_seq, self.tcp_snd_ack)
+
     def should_handle(self):
         """
         Function to return whether or not trAPT should handle 
