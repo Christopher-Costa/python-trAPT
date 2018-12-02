@@ -5,7 +5,7 @@ import handler.tcp
 import configparser
 import time
 
-class Receiver:
+class Receiver():
 
     def __init__ (self, trapt):
         self.trapt = trapt
