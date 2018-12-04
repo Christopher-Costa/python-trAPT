@@ -1,3 +1,4 @@
+import threading
 import scapy.all
 import handler.arp
 import handler.icmp
@@ -11,7 +12,13 @@ class Receiver():
         self.trapt = trapt
         self.interface = interface
         self.filter = self.trapt.config['interfaces'].settings[self.interface.name]['filter']
-        self.start()
+
+
+        self.trapt.logger['app'].logger.info("Starting capture on interface {0}".format(self.interface.name))
+        self.worker = threading.Thread(target=self.start_capture, args=())
+        self.worker.setDaemon(False)
+        self.worker.start()
+        self.trapt.logger['app'].logger.info("Capture started on interface {0}".format(self.interface.name))
 
     def frame_handler(self, frame):
         """ 
@@ -33,11 +40,10 @@ class Receiver():
             else:
                 handler.tcp.Tcp(frame, self.trapt, self.interface)
 
-    def start(self):
+    def start_capture(self):
         """
         Process to begin the capture process on the configured network interface
         and pass any frames matching the configured filter to the handler function.
         """
 
-        self.trapt.logger['app'].logger.info("Starting capture on interface {0}".format(self.interface.name))
         scapy.all.sniff(prn = self.frame_handler, store=0, filter=self.filter, iface=self.interface.name)
