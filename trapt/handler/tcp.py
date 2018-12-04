@@ -31,8 +31,8 @@ class Tcp(handler.handler.Handler):
 
     connection_table = {}
     
-    def __init__(self, frame, trapt):
-        handler.handler.Handler.__init__(self, frame, trapt)
+    def __init__(self, frame, trapt, interface):
+        handler.handler.Handler.__init__(self, frame, trapt, interface)
 
         self.src_ip = self.frame[scapy.all.IP].src
         self.dst_ip = self.frame[scapy.all.IP].dst
@@ -85,7 +85,7 @@ class Tcp(handler.handler.Handler):
                                         , flags = 'SA')
  
         tcp_reply = packet['IP']/packet['TCP']
-        self.trapt.transmitter.enqueue({ 'frame' : tcp_reply, 'latency' : latency })
+        self.interface.transmitter.enqueue({ 'frame' : tcp_reply, 'latency' : latency })
 
         self.log_packet('received', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
                         , 'SA', self.tcp_snd_seq, self.tcp_snd_ack)

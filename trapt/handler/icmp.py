@@ -3,8 +3,8 @@ import scapy.all
 
 class Icmp(handler.handler.Handler):
     
-    def __init__(self, frame, trapt):
-        handler.handler.Handler.__init__(self, frame, trapt)
+    def __init__(self, frame, trapt, interface):
+        handler.handler.Handler.__init__(self, frame, trapt, interface)
 
         self.src_ip = self.frame[scapy.all.IP].src
         self.dst_ip = self.frame[scapy.all.IP].dst
@@ -45,7 +45,7 @@ class Icmp(handler.handler.Handler):
  
  
                 icmp_reply = packet['IP']/packet['ICMP']/scapy.all.Raw(self.payload)
-                self.trapt.transmitter.enqueue({ 'frame' : icmp_reply, 'latency' : latency })
+                self.interface.transmitter.enqueue({ 'frame' : icmp_reply, 'latency' : latency })
 
     def is_echo_request(self):
         """

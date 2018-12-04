@@ -1,8 +1,9 @@
 class Handler():
 
-    def __init__(self, frame, trapt):
+    def __init__(self, frame, trapt, interface):
         self.frame = frame
         self.trapt = trapt
+        self.interface = interface
 
     def handle(self):
         """

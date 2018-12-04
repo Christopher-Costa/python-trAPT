@@ -5,9 +5,9 @@ import threading
 
 class Transmitter():
 
-    def __init__(self, trapt):
+    def __init__(self, interface, trapt):
         self.trapt = trapt
-        self.interface = self.trapt.config['main'].settings['general']['interface']
+        self.interface = interface
         self.tx_queue = queue.Queue(maxsize=256)
 
         self.worker = threading.Thread(target=self.monitor_queue, args=())
@@ -51,6 +51,6 @@ class Transmitter():
 
         time.sleep(int(latency)/1000)
         if frame.haslayer(scapy.all.Ether):
-            scapy.all.sendp(frame, iface=self.interface, verbose=False)
+            scapy.all.sendp(frame, iface=self.interface.name, verbose=False)
         else:
             scapy.all.send(frame, verbose=False)
