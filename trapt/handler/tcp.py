@@ -87,7 +87,7 @@ class Tcp(handler.handler.Handler):
         tcp_reply = packet['IP']/packet['TCP']
         self.interface.transmitter.enqueue({ 'frame' : tcp_reply, 'latency' : latency })
 
-        self.log_packet('received', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+        self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
                         , 'SA', self.tcp_snd_seq, self.tcp_snd_ack)
 
     def should_handle(self):
@@ -102,8 +102,8 @@ class Tcp(handler.handler.Handler):
                 interfaces = self.trapt.config[table].interfaces[self.dst_ip]
                 if 'ports' in interfaces:
                     if 'tcp' in interfaces['ports']:
-                        if str(self.tcp_dport) in interfaces['ports']['tcp']:
-                            if interfaces['ports']['tcp'][str(self.tcp_dport)]['state'] == 'open':
+                        if self.tcp_dport in interfaces['ports']['tcp']:
+                            if interfaces['ports']['tcp'][self.tcp_dport]['state'] == 'open':
                                 return True
                 
                 if 'default_state' in interfaces:
