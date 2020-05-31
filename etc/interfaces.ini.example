@@ -1,0 +1,2 @@
+[ens34]
+filter = inbound and (arp or icmp or tcp) and not host 2.0.0.1
