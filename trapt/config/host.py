@@ -1,15 +1,15 @@
-import config.json
+import config.yaml
 import tools.ip
 import tools.port
 import sys
 
-class Host(config.json.Json):
+class Host(config.yaml.Yaml):
 
     def __init__(self, trapt):
         self.trapt = trapt
 
         self.trapt.logger['app'].logger.info("Loading host configuration...")
-        config.json.Json.__init__(self, trapt, trapt.arguments.hosts)
+        config.yaml.Yaml.__init__(self, trapt, trapt.arguments.hosts)
         self.trapt.logger['app'].logger.info("Loading complete...")
 
         self.trapt.logger['app'].logger.info("Building host interface table...")
@@ -24,17 +24,14 @@ class Host(config.json.Json):
 
         Host configurations are expected in the following format:
 
-            {
-                "<address or address range> : {
-                    "gateway": "XXX.XXX.XXX.XXX",
-                    "default_state": "<blocked|open|reset>",
-                    "ports" : {
-                        "<port or port range> : { "state" : <blocked|open|reset> },
-                        ...
-                    }
-                },
-                ...
-            }
+            <IP address or address range>:
+                gateway: <next hop IP address>
+                default_state: <blocked|open|reset>
+                ports:
+                  <protocol>
+                      <port or port range>: <blocked|open|reset>
+                      ...
+                  ...
 
         If problems are detected, Print an informative message 
         and exit the program.
@@ -97,7 +94,7 @@ class Host(config.json.Json):
                         self.interfaces[host]['ports'][protocol] = {}
 
                         for port_range in ports[protocol]:
-                            state = ports[protocol][port_range]['state']
+                            state = ports[protocol][port_range]
 
                             port_list = tools.port.port_list(port_range)
                             for port in port_list:
@@ -106,7 +103,7 @@ class Host(config.json.Json):
 
                 for protocol in ('icmp',):
                     if protocol in ports:
-                        state = ports[protocol]['state']
+                        state = ports[protocol]
                         self.interfaces[host]['ports'][protocol] = {}
                         self.interfaces[host]['ports'][protocol]['state'] = state 
 

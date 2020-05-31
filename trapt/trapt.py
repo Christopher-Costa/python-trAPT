@@ -35,7 +35,7 @@ class TrAPT():
         ap = argparse.ArgumentParser( description='Run the trAPT virtual deception network environment')
         ap.add_argument('-c', '--config',     default='etc/config.ini' , help='path to configuration file')
         ap.add_argument('-i', '--interfaces', default='etc/interfaces.ini' , help='path to configuration file')
-        ap.add_argument('-r', '--routers',    default='etc/routers.ini', help='path to router definitions file')
-        ap.add_argument('-o', '--hosts',      default='etc/hosts.ini'  , help='path to host definitions file')
+        ap.add_argument('-r', '--routers',    default='etc/routers.yml', help='path to router definitions file')
+        ap.add_argument('-o', '--hosts',      default='etc/hosts.yml'  , help='path to host definitions file')
 
         self.arguments = ap.parse_args(self.argv)

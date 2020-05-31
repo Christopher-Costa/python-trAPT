@@ -1,11 +1,11 @@
-import config.json
+import config.yaml
 import tools.ip
 import tools.port
 import tools.number
 import ipaddress
 import sys
 
-class Router(config.json.Json):
+class Router(config.yaml.Yaml):
 
     def __init__(self, trapt):
         self.trapt = trapt
@@ -13,7 +13,7 @@ class Router(config.json.Json):
         self.interfaces = {}
 
         self.trapt.logger['app'].logger.info("Loading routing configuration")
-        config.json.Json.__init__(self, trapt, trapt.arguments.routers)
+        config.yaml.Yaml.__init__(self, trapt, trapt.arguments.routers)
         self.trapt.logger['app'].logger.info("Complete")
 
         self.trapt.logger['app'].logger.info("Building route table...")
@@ -29,21 +29,21 @@ class Router(config.json.Json):
 
         Router configurations are expected in the following format:
 
-            {
-                "<router identifier - ip address or name> : {
-                    "links" : [
-                        { 
-                            "network" : "<ip CIDR range or subnet>", 
-                            "address" : "<local subnet address>", 
-                            "latency" : "<added latency in ms>",
-                            "external" : "<0 or 1, optional>
-                        },
-                        ...
-                    ],
-                    "upstream" : "<next hop IP address>"
-                },
+            <router identifier - ip address or name>:
+                links:
+                  - network: <ip CIDR range or subnet> 
+                    address: <local subnet address> 
+                    latency: <added latency in ms>
+                    external: <0 or 1, optional>
+                  ...
+                upstream: <next hop IP address>
+                default_state: <blocked|open|reset>
+                ports:
+                  <protocol>:
+                    <port, or port range>: <blocked|open|reset>
+                    ...
+                  ...
                 ...
-            }
 
         If problems are detected, Print an informative message 
         and exit the program.  An upstream of a local interface refers
@@ -114,7 +114,7 @@ class Router(config.json.Json):
                         self.interfaces[address]['ports'][protocol] = {}
 
                         for port_range in ports[protocol]:
-                            state = ports[protocol][port_range]['state']
+                            state = ports[protocol][port_range]
 
                             port_list = tools.port.port_list(port_range)
                             for port in port_list:
@@ -123,7 +123,7 @@ class Router(config.json.Json):
 
                 for protocol in ('icmp',):
                     if protocol in ports:
-                        state = ports[protocol]['state']
+                        state = ports[protocol]
                         self.interfaces[address]['ports'][protocol] = {}
                         self.interfaces[address]['ports'][protocol]['state'] = state
         
