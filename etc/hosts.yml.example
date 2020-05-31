@@ -1,0 +1,11 @@
+2.2.2.2:
+    gateway: 2.2.2.10
+    default_state: blocked
+    ports:
+      tcp:
+        20-21: open
+        22: open
+        25: open
+      udp:
+        100-101: open
+      icmp: open

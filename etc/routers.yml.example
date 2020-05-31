@@ -1,0 +1,14 @@
+1.1.1.10:
+  links:
+    - network: 1.1.1.0/24
+      address: 1.1.1.10
+      latency: 1
+    - network: 2.2.2.0/24
+      address: 2.2.2.10
+      latency: 100
+  default_state: blocked
+  ports:
+    tcp:
+      22-30: open
+    icmp: open
+  upstream: 1.1.1.10
