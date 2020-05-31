@@ -12,7 +12,11 @@ class Icmp(handler.handler.Handler):
         self.icmp_seq = self.frame[scapy.all.ICMP].seq
         self.icmp_type = self.frame[scapy.all.ICMP].type
         self.icmp_code = self.frame[scapy.all.ICMP].code
-        self.payload = self.frame[scapy.all.Raw].load
+
+        if frame.haslayer(scapy.all.Raw):
+            self.payload = self.frame[scapy.all.Raw].load
+        else:
+            self.payload = ''
 
         self.handle()
 
