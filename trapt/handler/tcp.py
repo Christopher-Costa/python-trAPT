@@ -1,4 +1,5 @@
 import handler.handler
+import handler.ip
 import scapy.all
 import random
 
@@ -27,15 +28,13 @@ def connection_key(frame):
 
     return src_ip + '_' + src_port + '_' + dst_ip + '_' + dst_port
 
-class Tcp(handler.handler.Handler):
+class Tcp(handler.ip.Ip):
 
     connection_table = {}
     
     def __init__(self, frame, trapt, interface):
-        handler.handler.Handler.__init__(self, frame, trapt, interface)
+        handler.ip.Ip.__init__(self, frame, trapt, interface)
 
-        self.src_ip = self.frame[scapy.all.IP].src
-        self.dst_ip = self.frame[scapy.all.IP].dst
         self.tcp_sport = self.frame[scapy.all.TCP].sport
         self.tcp_dport = self.frame[scapy.all.TCP].dport
         self.tcp_state = 'LISTEN'
@@ -73,6 +72,8 @@ class Tcp(handler.handler.Handler):
         self.tcp_snd_seq = self.sequence_number()
         self.tcp_snd_ack = self.tcp_rcv_seq + 1
         self.state = 'SYN-RECEIVED'
+
+        ip_id = self.ip_id()
 
         packet = {}
         packet['IP'] = scapy.all.IP(src = self.dst_ip

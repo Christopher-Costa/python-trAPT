@@ -1,13 +1,11 @@
-import handler.handler
+import handler.ip
 import scapy.all
 
-class Icmp(handler.handler.Handler):
+class Icmp(handler.ip.Ip):
     
     def __init__(self, frame, trapt, interface):
-        handler.handler.Handler.__init__(self, frame, trapt, interface)
+        handler.ip.Ip.__init__(self, frame, trapt, interface)
 
-        self.src_ip = self.frame[scapy.all.IP].src
-        self.dst_ip = self.frame[scapy.all.IP].dst
         self.icmp_id = self.frame[scapy.all.ICMP].id
         self.icmp_seq = self.frame[scapy.all.ICMP].seq
         self.icmp_type = self.frame[scapy.all.ICMP].type
@@ -47,9 +45,10 @@ class Icmp(handler.handler.Handler):
                                 , self.icmp_id, self.icmp_seq, 'sent'
                                 , self.dst_ip, self.src_ip)
  
- 
-                icmp_reply = packet['IP']/packet['ICMP']/scapy.all.Raw(self.payload)
-                self.interface.transmitter.enqueue({ 'frame' : icmp_reply, 'latency' : latency })
+
+                self.send_packet(packet['ICMP']/scapy.all.Raw(self.payload)) 
+#                icmp_reply = packet['IP']/packet['ICMP']/scapy.all.Raw(self.payload)
+#                self.interface.transmitter.enqueue({ 'frame' : icmp_reply, 'latency' : latency })
 
     def is_echo_request(self):
         """
