@@ -1,5 +1,6 @@
 import handler.handler
 import scapy.all
+import time
 
 class Ip(handler.handler.Handler):
 
@@ -12,19 +13,54 @@ class Ip(handler.handler.Handler):
         self.dst_ip = self.frame[scapy.all.IP].dst
 
     def ip_id (self):
-       if self.dst_ip in Ip.host_table:
-           last_id = Ip.host_table[self.dst_ip]['last_id']
-           Ip.host_table[self.dst_ip]['last_id'] = (last_id + 1) % 65536
-       else:
-           Ip.host_table[self.dst_ip] = {}
-           Ip.host_table[self.dst_ip]['last_id'] = 1024
+        """
+        Function to return a valid IP Identifier for this host, to use 
+        in the IP Header.
+        """
 
-       return (Ip.host_table[self.dst_ip]['last_id'])
+        if not self.dst_ip in Ip.host_table:
+            Ip.host_table[self.dst_ip] = {}
+       
+        if 'last_id' in Ip.host_table[self.dst_ip]:
+            last_id = Ip.host_table[self.dst_ip]['last_id']
+            Ip.host_table[self.dst_ip]['last_id'] = (last_id + 1) % 65536
+        else:
+            Ip.host_table[self.dst_ip]['last_id'] = 1024
+
+        return (Ip.host_table[self.dst_ip]['last_id'])
+
+    def initial_seq_number(self):
+        """
+        Function to return a valid TCP Initial Sequence Number for this host, 
+        to use in the TCP Header.  
+
+        This information is tracked in the IP module since there may be a 
+        relationship/pattern to ISN initialtization at the IP layer, and 
+        it isn't neccesarily strictly random.
+        """
+
+        if not self.dst_ip in Ip.host_table:
+            Ip.host_table[self.dst_ip] = {}
+       
+        if 'last_isn' in Ip.host_table[self.dst_ip]:
+            last_isn = Ip.host_table[self.dst_ip]['last_isn']
+            Ip.host_table[self.dst_ip]['last_isn'] = last_isn + 1
+        else:
+            Ip.host_table[self.dst_ip]['last_isn'] = 1000000
+
+        Ip.host_table[self.dst_ip]['last_isn_time'] = time.time()
+
+        return (Ip.host_table[self.dst_ip]['last_isn'])
        
     def send_packet (self, payload):
+        """
+        Function to assemble complete IP Packets, with payload passed from
+        inheriting modules, and enqueue these packets for transmission.
+        """
+
         latency = self.latency(self.dst_ip)
         ip_packet = scapy.all.IP(src = self.dst_ip,
                                  dst = self.src_ip,
                                  id = self.ip_id())
+ 
         self.interface.transmitter.enqueue({ 'frame' : ip_packet/payload, 'latency' : latency })
-      

@@ -69,25 +69,18 @@ class Tcp(handler.ip.Ip):
 
         latency = self.latency(self.dst_ip)
 
-        self.tcp_snd_seq = self.sequence_number()
+        self.tcp_snd_seq = self.initial_seq_number()
         self.tcp_snd_ack = self.tcp_rcv_seq + 1
         self.state = 'SYN-RECEIVED'
 
-        ip_id = self.ip_id()
+        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
+                                 , dport = self.tcp_sport
+                                 , seq = self.tcp_snd_seq
+                                 , ack = self.tcp_snd_ack
+                                 , window = self.window_size()
+                                 , flags = 'SA')
 
-        packet = {}
-        packet['IP'] = scapy.all.IP(src = self.dst_ip
-                                    , dst = self.src_ip) 
-
-        packet['TCP'] = scapy.all.TCP(sport = self.tcp_dport
-                                        , dport = self.tcp_sport
-                                        , seq = self.tcp_snd_seq
-                                        , ack = self.tcp_snd_ack
-                                        , flags = 'SA')
- 
-        tcp_reply = packet['IP']/packet['TCP']
-        self.interface.transmitter.enqueue({ 'frame' : tcp_reply, 'latency' : latency })
-
+        self.send_packet(tcp_packet) 
         self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
                         , 'SA', self.tcp_snd_seq, self.tcp_snd_ack)
 
@@ -130,12 +123,12 @@ class Tcp(handler.ip.Ip):
                 return True
         return False
 
-    def sequence_number(self):
+    def window_size(self):
         """
-        Function to return a suitable initial sequence number (ISN)
+        Function to return a suitable TCP Window Size
         """
 
-        return random.randint(100000,10000000)
+        return(8192)
 
     def log_packet (self, direction, src_ip, sport, dst_ip, dport, flags, seq, ack):
         """

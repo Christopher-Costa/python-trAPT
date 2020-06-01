@@ -47,8 +47,6 @@ class Icmp(handler.ip.Ip):
  
 
                 self.send_packet(packet['ICMP']/scapy.all.Raw(self.payload)) 
-#                icmp_reply = packet['IP']/packet['ICMP']/scapy.all.Raw(self.payload)
-#                self.interface.transmitter.enqueue({ 'frame' : icmp_reply, 'latency' : latency })
 
     def is_echo_request(self):
         """
