@@ -1,5 +1,6 @@
 import handler.handler
 import handler.ip
+import tools.nmap
 import scapy.all
 import random
 
@@ -53,7 +54,8 @@ class Tcp(handler.ip.Ip):
         self.tcp_rcv_seq = frame[scapy.all.TCP].seq
         self.tcp_rcv_ack = frame[scapy.all.TCP].ack
         self.tcp_rcv_flags = frame[scapy.all.TCP].flags
-        tcp_options = frame[scapy.all.TCP].options
+        self.tcp_window = frame[scapy.all.TCP].window
+        self.tcp_options = frame[scapy.all.TCP].options
 
         self.log_packet('received', self.src_ip, self.tcp_sport, self.dst_ip, self.tcp_dport
                         , self.tcp_rcv_flags, self.tcp_rcv_seq, self.tcp_rcv_ack)
@@ -77,12 +79,31 @@ class Tcp(handler.ip.Ip):
             if ('A' in self.tcp_rcv_flags):
                 self.send_fin_ack()
 
+    def create_tcp_options(self):
+        snd_options = list()       
+ 
+        if (tools.nmap.is_scan_packet_1(self.tcp_options, self.tcp_window)):
+            snd_options = tools.nmap.scan_options_1()
+        if (tools.nmap.is_scan_packet_2(self.tcp_options, self.tcp_window)):
+            snd_options = tools.nmap.scan_options_2()
+        if (tools.nmap.is_scan_packet_3(self.tcp_options, self.tcp_window)):
+            snd_options = tools.nmap.scan_options_3()
+        if (tools.nmap.is_scan_packet_4(self.tcp_options, self.tcp_window)):
+            snd_options = tools.nmap.scan_options_4()
+        if (tools.nmap.is_scan_packet_5(self.tcp_options, self.tcp_window)):
+            snd_options = tools.nmap.scan_options_5()
+        if (tools.nmap.is_scan_packet_6(self.tcp_options, self.tcp_window)):
+            snd_options = tools.nmap.scan_options_6()
+
+
+        return snd_options
 
     def send_fin_ack(self):
         tcp_packet = scapy.all.TCP(sport = self.tcp_dport
                                  , dport = self.tcp_sport
                                  , seq = self.tcp_snd_seq
                                  , ack = self.tcp_rcv_seq + self.tcp_rcv_len
+                                 , options = self.create_tcp_options()
                                  , window = self.window_size()
                                  , flags = 'FA')
 
@@ -95,6 +116,7 @@ class Tcp(handler.ip.Ip):
         tcp_packet = scapy.all.TCP(sport = self.tcp_dport
                                  , dport = self.tcp_sport
                                  , seq = self.tcp_snd_seq
+                                 , options = self.create_tcp_options()
                                  , window = self.window_size()
                                  , flags = 'R')
 
@@ -120,6 +142,7 @@ class Tcp(handler.ip.Ip):
                                  , dport = self.tcp_sport
                                  , seq = isn
                                  , ack = self.tcp_snd_ack
+                                 , options = self.create_tcp_options()
                                  , window = self.window_size()
                                  , flags = 'SA')
 
