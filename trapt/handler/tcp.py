@@ -37,6 +37,7 @@ class Tcp(handler.ip.Ip):
     def __init__(self, frame, trapt, interface):
         handler.ip.Ip.__init__(self, frame, trapt, interface)
 
+        self.frame = frame
         self.tcp_sport = self.frame[scapy.all.TCP].sport
         self.tcp_dport = self.frame[scapy.all.TCP].dport
         self.last_sent = 0
@@ -53,37 +54,26 @@ class Tcp(handler.ip.Ip):
         or invoking other handlers.
         """
 
-        self.tcp_rcv_seq = frame[scapy.all.TCP].seq
-        self.tcp_rcv_ack = frame[scapy.all.TCP].ack
-        self.tcp_rcv_flags = frame[scapy.all.TCP].flags
-        self.tcp_window = frame[scapy.all.TCP].window
-        self.tcp_options = frame[scapy.all.TCP].options
-
+        self.frame = frame
         self.log_packet('received', self.src_ip, self.tcp_sport, self.dst_ip, self.tcp_dport
                         , self.tcp_rcv_flags, self.tcp_rcv_seq, self.tcp_rcv_ack)
 
-        if frame.haslayer(scapy.all.Raw):
-             self.tcp_rcv_len = len(frame[scapy.all.Raw].load)
-        else:
-             self.tcp_rcv_len = 0
-
-        self.snd_timestamp()
+        tools.nmap.is_scan_packet_t2(self)
+        tools.nmap.is_scan_packet_t3(self)
+        tools.nmap.is_scan_packet_t4(self)
+        tools.nmap.is_scan_packet_t5(self)
 
         if self.should_establish_connection():
             self.send_syn_ack()
 
-        if ('R' in self.tcp_rcv_flags):
-            if ('A' in self.tcp_rcv_flags):
-                self.send_rst_ack()
-            else:
-                self.send_rst()
+        if self.is_tcp_rcv_flags_RA():
+            self.send_rst_ack()
+        if self.is_tcp_rcv_flags_R():
+            self.send_rst()
+        if self.is_tcp_rcv_flags_FA():
+            self.send_fin_ack()
 
-        if ('F' in self.tcp_rcv_flags):
-            self.tcp_rcv_len += 1
-            if ('A' in self.tcp_rcv_flags):
-                self.send_fin_ack()
-
-    def create_tcp_options(self):
+    def tcp_snd_options(self):
         snd_options = list()       
  
         if (tools.nmap.is_scan_packet_1(self)):
@@ -102,16 +92,16 @@ class Tcp(handler.ip.Ip):
         return snd_options
 
     def send_fin_ack(self):
-    # TODO: remove connection
         tcp_packet = scapy.all.TCP(sport = self.tcp_dport
                                  , dport = self.tcp_sport
                                  , seq = self.tcp_snd_seq
-                                 , ack = self.tcp_rcv_seq + self.tcp_rcv_len
-                                 , options = self.create_tcp_options()
-                                 , window = self.window_size()
+                                 , ack = self.tcp_rcv_seq() + self.tcp_rcv_len()
+                                 , options = self.tcp_snd_options()
+                                 , window = self.tcp_snd_window()
                                  , flags = 'FA')
 
         self.send_packet(tcp_packet)
+        self.remove_connection()
         self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
                         , 'FA', self.tcp_snd_seq, self.tcp_snd_ack)
         
@@ -120,11 +110,12 @@ class Tcp(handler.ip.Ip):
         tcp_packet = scapy.all.TCP(sport = self.tcp_dport
                                  , dport = self.tcp_sport
                                  , seq = self.tcp_snd_seq
-                                 , options = self.create_tcp_options()
-                                 , window = self.window_size()
+                                 , options = self.tcp_snd_options()
+                                 , window = self.tcp_snd_window()
                                  , flags = 'R')
 
         self.send_packet(tcp_packet)
+        self.remove_connection()
         self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
                         , 'R', self.tcp_snd_seq, self.tcp_snd_ack)
         
@@ -139,15 +130,15 @@ class Tcp(handler.ip.Ip):
 
         isn = self.initial_seq_number()
         self.tcp_snd_seq = isn + 1
-        self.tcp_snd_ack = self.tcp_rcv_seq + 1
+        self.tcp_snd_ack = self.tcp_rcv_seq() + self.tcp_rcv_len()
         self.state = 'SYN-RECEIVED'
 
         tcp_packet = scapy.all.TCP(sport = self.tcp_dport
                                  , dport = self.tcp_sport
                                  , seq = isn
                                  , ack = self.tcp_snd_ack
-                                 , options = self.create_tcp_options()
-                                 , window = self.window_size()
+                                 , options = self.tcp_snd_options()
+                                 , window = self.tcp_snd_window()
                                  , flags = 'SA')
 
         self.send_packet(tcp_packet) 
@@ -183,21 +174,15 @@ class Tcp(handler.ip.Ip):
         Return True if so, False if not.
         """
 
-        flags = str(self.tcp_rcv_flags)
-        if self.tcp_state == 'LISTEN':
-            if ('S' in flags 
-                    and not 'A' in flags
-                    and not 'F' in flags
-                    and not 'R' in flags
-                    and not 'P' in flags):
+        if (self.tcp_state == 'LISTEN' and
+            self.is_tcp_rcv_flags_S()):
                 return True
         return False
 
-    def window_size(self):
+    def tcp_snd_window(self):
         """
         Function to return a suitable TCP Window Size
         """
-
         return(8192)
 
     def log_packet (self, direction, src_ip, sport, dst_ip, dport, flags, seq, ack):
@@ -218,12 +203,122 @@ class Tcp(handler.ip.Ip):
 
         self.connection_table[connection_key(self.frame)] = self
 
-    def recv_timestamp(self):
-        for option in self.tcp_options:
+    def remove_connection(self):
+        self.connection_table.pop(connection_key(self.frame))
+
+    def tcp_rcv_timestamp(self):
+        for option in self.tcp_rcv_options():
             if option[0] == 'Timestamp':
                 return option[1][0]
         return 0
 
-    def snd_timestamp(self):
+    def tcp_snd_timestamp(self):
         timestamp = int(time.time() * 100) % 0xFFFFFFFF
         return (timestamp)
+
+    def is_tcp_rcv_flags_S(self):
+        if ('S' in self.frame[scapy.all.TCP].flags
+            and not 'A' in self.frame[scapy.all.TCP].flags
+            and not 'F' in self.frame[scapy.all.TCP].flags
+            and not 'R' in self.frame[scapy.all.TCP].flags
+            and not 'P' in self.frame[scapy.all.TCP].flags
+            and not 'U' in self.frame[scapy.all.TCP].flags):
+                return True
+        return False
+
+    def is_tcp_rcv_flags_A(self):
+        if ('A' in self.frame[scapy.all.TCP].flags
+            and not 'S' in self.frame[scapy.all.TCP].flags
+            and not 'F' in self.frame[scapy.all.TCP].flags
+            and not 'R' in self.frame[scapy.all.TCP].flags
+            and not 'P' in self.frame[scapy.all.TCP].flags
+            and not 'U' in self.frame[scapy.all.TCP].flags):
+                return True
+        return False
+
+    def has_tcp_rcv_flags_S(self):
+        if 'S' in self.frame[scapy.all.TCP].flags:
+            return True
+        return False
+
+    def has_tcp_rcv_flags_F(self):
+        if 'F' in self.frame[scapy.all.TCP].flags:
+            return True
+        return False
+
+    def is_tcp_rcv_flags_R(self):
+        if ('R' in self.frame[scapy.all.TCP].flags
+            and not 'A' in self.frame[scapy.all.TCP].flags
+            and not 'F' in self.frame[scapy.all.TCP].flags
+            and not 'S' in self.frame[scapy.all.TCP].flags
+            and not 'P' in self.frame[scapy.all.TCP].flags
+            and not 'U' in self.frame[scapy.all.TCP].flags):
+                return True
+        return False
+
+    def is_tcp_rcv_flags_FA(self):
+        if ('F' in self.frame[scapy.all.TCP].flags
+            and 'A' in self.frame[scapy.all.TCP].flags
+            and not 'R' in self.frame[scapy.all.TCP].flags
+            and not 'S' in self.frame[scapy.all.TCP].flags
+            and not 'P' in self.frame[scapy.all.TCP].flags
+            and not 'U' in self.frame[scapy.all.TCP].flags):
+                return True
+        return False
+
+    def is_tcp_rcv_flags_RA(self):
+        if ('R' in self.frame[scapy.all.TCP].flags
+            and 'A' in self.frame[scapy.all.TCP].flags
+            and not 'F' in self.frame[scapy.all.TCP].flags
+            and not 'S' in self.frame[scapy.all.TCP].flags
+            and not 'P' in self.frame[scapy.all.TCP].flags
+            and not 'U' in self.frame[scapy.all.TCP].flags):
+                return True
+        return False
+
+    def is_tcp_rcv_flags_FPSU(self):
+        if ('F' in self.frame[scapy.all.TCP].flags
+            and 'S' in self.frame[scapy.all.TCP].flags
+            and 'P' in self.frame[scapy.all.TCP].flags
+            and 'U' in self.frame[scapy.all.TCP].flags
+            and not 'A' in self.frame[scapy.all.TCP].flags
+            and not 'R' in self.frame[scapy.all.TCP].flags):
+                return True
+        return False
+
+    def is_tcp_rcv_flags_FPU(self):
+        if ('F' in self.frame[scapy.all.TCP].flags
+            and not 'S' in self.frame[scapy.all.TCP].flags
+            and 'P' in self.frame[scapy.all.TCP].flags
+            and 'U' in self.frame[scapy.all.TCP].flags
+            and not 'A' in self.frame[scapy.all.TCP].flags
+            and not 'R' in self.frame[scapy.all.TCP].flags):
+                return True
+        return False
+
+    def tcp_rcv_seq(self):
+        return self.frame[scapy.all.TCP].seq
+
+    def tcp_rcv_ack(self):
+        return self.frame[scapy.all.TCP].ack
+        
+    def tcp_rcv_flags(self):
+        return self.frame[scapy.all.TCP].flags
+
+    def tcp_rcv_window(self):
+        return self.frame[scapy.all.TCP].window
+
+    def tcp_rcv_options(self):
+        return self.frame[scapy.all.TCP].options
+
+    def tcp_rcv_len(self):
+        len = 0
+
+        if self.frame.haslayer(scapy.all.Raw):
+            len = len(frame[scapy.all.Raw].load)
+
+        # SYN and FIN count as a byte for purposes of acknowledging
+        if (self.has_tcp_rcv_flags_S() or self.has_tcp_rcv_flags_F()):
+            len += 1
+
+        return len

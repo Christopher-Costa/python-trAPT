@@ -1,6 +1,6 @@
 def is_scan_packet_1(conn):
-    window = conn.tcp_window
-    options = conn.tcp_options
+    window = conn.tcp_rcv_window()
+    options = conn.tcp_rcv_options()
 
     if window != 1:
         return False
@@ -21,8 +21,8 @@ def is_scan_packet_1(conn):
         return False
 
 def is_scan_packet_2(conn):
-    window = conn.tcp_window
-    options = conn.tcp_options
+    window = conn.tcp_rcv_window()
+    options = conn.tcp_rcv_options()
 
     if window != 63:
         return False
@@ -43,8 +43,8 @@ def is_scan_packet_2(conn):
         return False
 
 def is_scan_packet_3(conn):
-    window = conn.tcp_window
-    options = conn.tcp_options
+    window = conn.tcp_rcv_window()
+    options = conn.tcp_rcv_options()
 
     if window != 4:
         return False
@@ -66,8 +66,8 @@ def is_scan_packet_3(conn):
         return False
 
 def is_scan_packet_4(conn):
-    window = conn.tcp_window
-    options = conn.tcp_options
+    window = conn.tcp_rcv_window()
+    options = conn.tcp_rcv_options()
 
     if window != 4:
         return False
@@ -87,8 +87,8 @@ def is_scan_packet_4(conn):
         return False
 
 def is_scan_packet_5(conn):
-    window = conn.tcp_window
-    options = conn.tcp_options
+    window = conn.tcp_rcv_window()
+    options = conn.tcp_rcv_options()
 
     if window != 16:
         return False
@@ -109,8 +109,8 @@ def is_scan_packet_5(conn):
         return False
 
 def is_scan_packet_6(conn):
-    window = conn.tcp_window
-    options = conn.tcp_options
+    window = conn.tcp_rcv_window()
+    options = conn.tcp_rcv_options()
 
     if window != 512:
         return False
@@ -128,19 +128,55 @@ def is_scan_packet_6(conn):
     except IndexError:
         return False
 
+def is_scan_packet_t2(conn):
+    if not conn.tcp_rcv_flags():
+        if conn.tcp_rcv_window() == 128:
+            if conn.ip_rcv_flags() == 'DF':
+                print ("T2")
+    
+def is_scan_packet_t3(conn):
+    if conn.is_tcp_rcv_flags_FPSU(): 
+            if conn.tcp_rcv_window() == 256:
+                if not conn.ip_rcv_flags():
+                    print ("T3")
+
+def is_scan_packet_t4(conn):
+    if conn.is_tcp_rcv_flags_A(): 
+            if conn.tcp_rcv_window() == 1024:
+                if conn.ip_rcv_flags() == 'DF':
+                    print ("T4")
+
+def is_scan_packet_t5(conn):
+    if conn.is_tcp_rcv_flags_S(): 
+            if conn.tcp_rcv_window() == 31337:
+                if not conn.ip_rcv_flags():
+                    print ("T5")
+
+def is_scan_packet_t6(conn):
+    if conn.is_tcp_rcv_flags_A(): 
+            if conn.tcp_rcv_window() == 32768:
+                if conn.ip_rcv_flags() == 'DF':
+                    print ("T6")
+
+def is_scan_packet_t7(conn):
+    if conn.is_tcp_rcv_flags_FPU(): 
+            if conn.tcp_rcv_window() == 65535:
+                if not conn.ip_rcv_flags():
+                    print ("T7")
+
 def scan_options_1(conn):
     return [('MSS', 1366), 
             ('NOP', None), 
             ('WScale', 8), 
             ('SAckOK', b''), 
-            ('Timestamp', (1, conn.recv_timestamp()))]
+            ('Timestamp', (1, conn.tcp_rcv_timestamp()))]
 
 def scan_options_2(conn):
     return [('MSS', 1366), 
             ('NOP', None), 
             ('WScale', 8), 
             ('SAckOK', b''), 
-            ('Timestamp', (conn.snd_timestamp(), conn.recv_timestamp()))]
+            ('Timestamp', (conn.tcp_snd_timestamp(), conn.tcp_rcv_timestamp()))]
 
 def scan_options_3(conn):
     return [('MSS', 1366), 
@@ -148,23 +184,23 @@ def scan_options_3(conn):
             ('WScale', 8), 
             ('NOP', None), 
             ('NOP', None), 
-            ('Timestamp', (conn.snd_timestamp(), conn.recv_timestamp()))]
+            ('Timestamp', (conn.tcp_snd_timestamp(), conn.tcp_rcv_timestamp()))]
 
 def scan_options_4(conn):
     return [('MSS', 1366), 
             ('NOP', None), 
             ('WScale', 8), 
             ('SAckOK', b''), 
-            ('Timestamp', (conn.snd_timestamp(), conn.recv_timestamp()))]
+            ('Timestamp', (conn.tcp_snd_timestamp(), conn.tcp_rcv_timestamp()))]
 
 def scan_options_5(conn):
     return [('MSS', 1366), 
             ('NOP', None), 
             ('WScale', 8), 
             ('SAckOK', b''), 
-            ('Timestamp', (conn.snd_timestamp(), conn.recv_timestamp()))]
+            ('Timestamp', (conn.tcp_snd_timestamp(), conn.tcp_rcv_timestamp()))]
 
 def scan_options_6(conn):
     return [('MSS', 1366),
             ('SAckOK', b''), 
-            ('Timestamp', (conn.snd_timestamp(), conn.recv_timestamp()))]
+            ('Timestamp', (conn.tcp_snd_timestamp(), conn.tcp_rcv_timestamp()))]

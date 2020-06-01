@@ -39,17 +39,20 @@ class Ip(handler.handler.Handler):
         it isn't neccesarily strictly random.
         """
 
+        current_time = time.time()
+
         if not self.dst_ip in Ip.host_table:
             Ip.host_table[self.dst_ip] = {}
        
         if 'last_isn' in Ip.host_table[self.dst_ip]:
             last_isn = Ip.host_table[self.dst_ip]['last_isn']
-            Ip.host_table[self.dst_ip]['last_isn'] = last_isn + 1
+            last_time = Ip.host_table[self.dst_ip]['last_isn_time']
+
+            Ip.host_table[self.dst_ip]['last_isn'] = (last_isn + int(268 * (current_time - last_time))) % 0xFFFFFFFF
         else:
             Ip.host_table[self.dst_ip]['last_isn'] = 1000000
 
-        Ip.host_table[self.dst_ip]['last_isn_time'] = time.time()
-
+        Ip.host_table[self.dst_ip]['last_isn_time'] = current_time
         return (Ip.host_table[self.dst_ip]['last_isn'])
        
     def send_packet (self, payload):
@@ -61,6 +64,14 @@ class Ip(handler.handler.Handler):
         latency = self.latency(self.dst_ip)
         ip_packet = scapy.all.IP(src = self.dst_ip,
                                  dst = self.src_ip,
-                                 id = self.ip_id())
+                                 id = self.ip_id(),
+                                 ttl = 127,
+                                 flags = self.ip_snd_flags())
  
         self.interface.transmitter.enqueue({ 'frame' : ip_packet/payload, 'latency' : latency })
+
+    def ip_rcv_flags(self):
+        return self.frame[scapy.all.IP].flags
+
+    def ip_snd_flags(self):
+        return 'DF'
