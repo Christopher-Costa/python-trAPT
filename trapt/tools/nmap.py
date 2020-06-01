@@ -132,37 +132,43 @@ def is_scan_packet_t2(conn):
     if not conn.tcp_rcv_flags():
         if conn.tcp_rcv_window() == 128:
             if conn.ip_rcv_flags() == 'DF':
-                print ("T2")
+                return True
+    return False
     
 def is_scan_packet_t3(conn):
     if conn.is_tcp_rcv_flags_FPSU(): 
             if conn.tcp_rcv_window() == 256:
                 if not conn.ip_rcv_flags():
-                    print ("T3")
+                   return True
+    return False
 
 def is_scan_packet_t4(conn):
     if conn.is_tcp_rcv_flags_A(): 
             if conn.tcp_rcv_window() == 1024:
                 if conn.ip_rcv_flags() == 'DF':
-                    print ("T4")
+                    return True
+    return False
 
 def is_scan_packet_t5(conn):
     if conn.is_tcp_rcv_flags_S(): 
             if conn.tcp_rcv_window() == 31337:
                 if not conn.ip_rcv_flags():
-                    print ("T5")
+                    return True
+    return False
 
 def is_scan_packet_t6(conn):
     if conn.is_tcp_rcv_flags_A(): 
             if conn.tcp_rcv_window() == 32768:
                 if conn.ip_rcv_flags() == 'DF':
-                    print ("T6")
+                    return True
+    return False
 
 def is_scan_packet_t7(conn):
     if conn.is_tcp_rcv_flags_FPU(): 
             if conn.tcp_rcv_window() == 65535:
                 if not conn.ip_rcv_flags():
-                    print ("T7")
+                    return True
+    return False
 
 def scan_options_1(conn):
     return [('MSS', 1366), 

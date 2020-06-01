@@ -43,7 +43,10 @@ class Tcp(handler.ip.Ip):
         self.last_sent = 0
         self.tcp_state = 'LISTEN'
 
-        if self.should_handle():
+        self.tcp_snd_seq = 0
+        self.tcp_snd_ack = 0
+
+        if self.port_disposition() != 'blocked':
             self.add_connection()
             self.handle(self.frame)
 
@@ -56,20 +59,45 @@ class Tcp(handler.ip.Ip):
 
         self.frame = frame
         self.log_packet('received', self.src_ip, self.tcp_sport, self.dst_ip, self.tcp_dport
-                        , self.tcp_rcv_flags, self.tcp_rcv_seq, self.tcp_rcv_ack)
+                        , self.tcp_rcv_flags(), self.tcp_rcv_seq(), self.tcp_rcv_ack())
 
-        tools.nmap.is_scan_packet_t2(self)
-        tools.nmap.is_scan_packet_t3(self)
-        tools.nmap.is_scan_packet_t4(self)
-        tools.nmap.is_scan_packet_t5(self)
+        if tools.nmap.is_scan_packet_t2(self):
+            self.send_scan_t2_response()
+            return
+
+        if tools.nmap.is_scan_packet_t3(self):
+            self.send_scan_t3_response()
+            return
+
+        if tools.nmap.is_scan_packet_t4(self):
+            self.send_scan_t4_response()
+            return
+
+        if tools.nmap.is_scan_packet_t5(self):
+            self.send_scan_t5_response()
+            return
+
+        if tools.nmap.is_scan_packet_t6(self):
+            self.send_scan_t6_response()
+            return
+
+        if tools.nmap.is_scan_packet_t7(self):
+            self.send_scan_t7_response()
+            return
+
+        if self.port_disposition() == 'reset':
+            self.send_rst()
+            return
 
         if self.should_establish_connection():
             self.send_syn_ack()
 
         if self.is_tcp_rcv_flags_RA():
             self.send_rst_ack()
+
         if self.is_tcp_rcv_flags_R():
             self.send_rst()
+
         if self.is_tcp_rcv_flags_FA():
             self.send_fin_ack()
 
@@ -145,7 +173,7 @@ class Tcp(handler.ip.Ip):
         self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
                         , 'SA', self.tcp_snd_seq, self.tcp_snd_ack)
 
-    def should_handle(self):
+    def port_disposition(self):
         """
         Function to return whether or not trAPT should handle 
         the received frame via TCP.  This is determined by 
@@ -158,13 +186,11 @@ class Tcp(handler.ip.Ip):
                 if 'ports' in interfaces:
                     if 'tcp' in interfaces['ports']:
                         if self.tcp_dport in interfaces['ports']['tcp']:
-                            if interfaces['ports']['tcp'][self.tcp_dport]['state'] == 'open':
-                                return True
+                            return interfaces['ports']['tcp'][self.tcp_dport]['state']
                 
                 if 'default_state' in interfaces:
-                    if interfaces['default_state'] == 'open':
-                        return True
-        return False
+                    return interfaces['default_state']
+        return 'blocked'
 
     def should_establish_connection(self):
         """
@@ -322,3 +348,106 @@ class Tcp(handler.ip.Ip):
             len += 1
 
         return len
+
+    def send_scan_t2_response(self):
+        seq = 0
+        ack = self.tcp_rcv_seq()
+        window = 0
+        flags = 'RA'
+
+        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
+                                 , dport = self.tcp_sport
+                                 , seq = seq
+                                 , ack = ack
+                                 , window = window
+                                 , flags = flags)
+
+        self.send_packet(tcp_packet)
+        self.log_packet('sent NMAP T2 response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+                        , flags, seq, ack)
+
+    def send_scan_t3_response(self):
+        seq = 0
+        ack = 1
+        window = 0
+        flags = 'RA'
+
+        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
+                                 , dport = self.tcp_sport
+                                 , seq = seq
+                                 , ack = ack
+                                 , window = window
+                                 , flags = flags)
+
+        self.send_packet(tcp_packet)
+        self.log_packet('sent NMAP T3 response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+                        , flags, seq, ack)
+
+    def send_scan_t4_response(self):
+        seq = self.tcp_rcv_ack()
+        ack = 1
+        window = 0
+        flags = 'R'
+
+        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
+                                 , dport = self.tcp_sport
+                                 , seq = seq
+                                 , ack = ack
+                                 , window = window
+                                 , flags = flags)
+
+        self.send_packet(tcp_packet)
+        self.log_packet('sent NMAP T4 response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+                        , flags, seq, ack)
+
+    def send_scan_t5_response(self):
+        seq = 0
+        ack = self.tcp_rcv_seq() + 1
+        window = 0
+        flags = 'RA'
+
+        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
+                                 , dport = self.tcp_sport
+                                 , seq = seq
+                                 , ack = ack
+                                 , window = window
+                                 , flags = flags)
+
+        self.send_packet(tcp_packet)
+        self.log_packet('sent NMAP T5 response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+                        , flags, seq, ack)
+
+    def send_scan_t6_response(self):
+        seq = self.tcp_rcv_ack()
+        ack = 1
+        window = 0
+        flags = 'R'
+
+        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
+                                 , dport = self.tcp_sport
+                                 , seq = seq
+                                 , ack = ack
+                                 , window = window
+                                 , flags = flags)
+
+        self.send_packet(tcp_packet)
+        self.log_packet('sent NMAP T6 response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+                        , flags, seq, ack)
+
+    def send_scan_t7_response(self):
+        seq = 0
+        ack = self.tcp_rcv_seq() + 1
+        window = 0
+        flags = 'RA'
+
+        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
+                                 , dport = self.tcp_sport
+                                 , seq = seq
+                                 , ack = ack
+                                 , window = window
+                                 , flags = flags)
+
+        self.send_packet(tcp_packet)
+        self.log_packet('sent NMAP T7 response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+                        , flags, seq, ack)
+
