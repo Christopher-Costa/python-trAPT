@@ -1,4 +1,7 @@
-def is_scan_packet_1(options, window):
+def is_scan_packet_1(conn):
+    window = conn.tcp_window
+    options = conn.tcp_options
+
     if window != 1:
         return False
 
@@ -17,7 +20,10 @@ def is_scan_packet_1(options, window):
     except IndexError:
         return False
 
-def is_scan_packet_2(options, window):
+def is_scan_packet_2(conn):
+    window = conn.tcp_window
+    options = conn.tcp_options
+
     if window != 63:
         return False
 
@@ -36,7 +42,10 @@ def is_scan_packet_2(options, window):
     except IndexError:
         return False
 
-def is_scan_packet_3(options, window):
+def is_scan_packet_3(conn):
+    window = conn.tcp_window
+    options = conn.tcp_options
+
     if window != 4:
         return False
 
@@ -52,12 +61,14 @@ def is_scan_packet_3(options, window):
             options[5][0] == 'MSS' and options[5][1] == 640 ):
               
             return True
-            print ("scan_packet_3")
 
     except IndexError:
         return False
 
-def is_scan_packet_4(options, window):
+def is_scan_packet_4(conn):
+    window = conn.tcp_window
+    options = conn.tcp_options
+
     if window != 4:
         return False
 
@@ -75,7 +86,10 @@ def is_scan_packet_4(options, window):
     except IndexError:
         return False
 
-def is_scan_packet_5(options, window):
+def is_scan_packet_5(conn):
+    window = conn.tcp_window
+    options = conn.tcp_options
+
     if window != 16:
         return False
 
@@ -94,7 +108,10 @@ def is_scan_packet_5(options, window):
     except IndexError:
         return False
 
-def is_scan_packet_6(options, window):
+def is_scan_packet_6(conn):
+    window = conn.tcp_window
+    options = conn.tcp_options
+
     if window != 512:
         return False
 
@@ -111,21 +128,43 @@ def is_scan_packet_6(options, window):
     except IndexError:
         return False
 
-def scan_options_1():
-    return [('MSS', 1366), ('NOP', None), ('WScale', 8), ('SAckOK', b''), ('Timestamp', (1, 1))]
+def scan_options_1(conn):
+    return [('MSS', 1366), 
+            ('NOP', None), 
+            ('WScale', 8), 
+            ('SAckOK', b''), 
+            ('Timestamp', (1, conn.recv_timestamp()))]
 
-def scan_options_2():
-    return [('MSS', 1366), ('NOP', None), ('WScale', 8), ('SAckOK', b''), ('Timestamp', (1, 1))]
+def scan_options_2(conn):
+    return [('MSS', 1366), 
+            ('NOP', None), 
+            ('WScale', 8), 
+            ('SAckOK', b''), 
+            ('Timestamp', (conn.snd_timestamp(), conn.recv_timestamp()))]
 
-def scan_options_3():
-    return [('MSS', 1366), ('NOP', None), ('WScale', 8), ('NOP', None), ('NOP', None), ('Timestamp', (1, 1))]
+def scan_options_3(conn):
+    return [('MSS', 1366), 
+            ('NOP', None), 
+            ('WScale', 8), 
+            ('NOP', None), 
+            ('NOP', None), 
+            ('Timestamp', (conn.snd_timestamp(), conn.recv_timestamp()))]
 
-def scan_options_4():
-    return [('MSS', 1366), ('NOP', None), ('WScale', 8), ('SAckOK', b''), ('Timestamp', (1, 1))]
+def scan_options_4(conn):
+    return [('MSS', 1366), 
+            ('NOP', None), 
+            ('WScale', 8), 
+            ('SAckOK', b''), 
+            ('Timestamp', (conn.snd_timestamp(), conn.recv_timestamp()))]
 
-def scan_options_5():
-    return [('MSS', 1366), ('NOP', None), ('WScale', 8), ('SAckOK', b''), ('Timestamp', (1, 1))]
+def scan_options_5(conn):
+    return [('MSS', 1366), 
+            ('NOP', None), 
+            ('WScale', 8), 
+            ('SAckOK', b''), 
+            ('Timestamp', (conn.snd_timestamp(), conn.recv_timestamp()))]
 
-def scan_options_6():
-    return [('MSS', 1366), ('SAckOK', b''), ('Timestamp', (1, 1))]
-
+def scan_options_6(conn):
+    return [('MSS', 1366),
+            ('SAckOK', b''), 
+            ('Timestamp', (conn.snd_timestamp(), conn.recv_timestamp()))]

@@ -3,6 +3,7 @@ import handler.ip
 import tools.nmap
 import scapy.all
 import random
+import time
 
 def connection_exists(frame):
     """
@@ -38,6 +39,7 @@ class Tcp(handler.ip.Ip):
 
         self.tcp_sport = self.frame[scapy.all.TCP].sport
         self.tcp_dport = self.frame[scapy.all.TCP].dport
+        self.last_sent = 0
         self.tcp_state = 'LISTEN'
 
         if self.should_handle():
@@ -65,6 +67,8 @@ class Tcp(handler.ip.Ip):
         else:
              self.tcp_rcv_len = 0
 
+        self.snd_timestamp()
+
         if self.should_establish_connection():
             self.send_syn_ack()
 
@@ -82,23 +86,23 @@ class Tcp(handler.ip.Ip):
     def create_tcp_options(self):
         snd_options = list()       
  
-        if (tools.nmap.is_scan_packet_1(self.tcp_options, self.tcp_window)):
-            snd_options = tools.nmap.scan_options_1()
-        if (tools.nmap.is_scan_packet_2(self.tcp_options, self.tcp_window)):
-            snd_options = tools.nmap.scan_options_2()
-        if (tools.nmap.is_scan_packet_3(self.tcp_options, self.tcp_window)):
-            snd_options = tools.nmap.scan_options_3()
-        if (tools.nmap.is_scan_packet_4(self.tcp_options, self.tcp_window)):
-            snd_options = tools.nmap.scan_options_4()
-        if (tools.nmap.is_scan_packet_5(self.tcp_options, self.tcp_window)):
-            snd_options = tools.nmap.scan_options_5()
-        if (tools.nmap.is_scan_packet_6(self.tcp_options, self.tcp_window)):
-            snd_options = tools.nmap.scan_options_6()
-
+        if (tools.nmap.is_scan_packet_1(self)):
+            snd_options = tools.nmap.scan_options_1(self)
+        if (tools.nmap.is_scan_packet_2(self)):
+            snd_options = tools.nmap.scan_options_2(self)
+        if (tools.nmap.is_scan_packet_3(self)):
+            snd_options = tools.nmap.scan_options_3(self)
+        if (tools.nmap.is_scan_packet_4(self)):
+            snd_options = tools.nmap.scan_options_4(self)
+        if (tools.nmap.is_scan_packet_5(self)):
+            snd_options = tools.nmap.scan_options_5(self)
+        if (tools.nmap.is_scan_packet_6(self)):
+            snd_options = tools.nmap.scan_options_6(self)
 
         return snd_options
 
     def send_fin_ack(self):
+    # TODO: remove connection
         tcp_packet = scapy.all.TCP(sport = self.tcp_dport
                                  , dport = self.tcp_sport
                                  , seq = self.tcp_snd_seq
@@ -213,3 +217,13 @@ class Tcp(handler.ip.Ip):
         """
 
         self.connection_table[connection_key(self.frame)] = self
+
+    def recv_timestamp(self):
+        for option in self.tcp_options:
+            if option[0] == 'Timestamp':
+                return option[1][0]
+        return 0
+
+    def snd_timestamp(self):
+        timestamp = int(time.time() * 100) % 0xFFFFFFFF
+        return (timestamp)
