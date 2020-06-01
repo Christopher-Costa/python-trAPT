@@ -54,12 +54,54 @@ class Tcp(handler.ip.Ip):
         self.tcp_rcv_ack = frame[scapy.all.TCP].ack
         self.tcp_rcv_flags = frame[scapy.all.TCP].flags
         tcp_options = frame[scapy.all.TCP].options
-        
+
         self.log_packet('received', self.src_ip, self.tcp_sport, self.dst_ip, self.tcp_dport
                         , self.tcp_rcv_flags, self.tcp_rcv_seq, self.tcp_rcv_ack)
 
+        if frame.haslayer(scapy.all.Raw):
+             self.tcp_rcv_len = len(frame[scapy.all.Raw].load)
+        else:
+             self.tcp_rcv_len = 0
+
         if self.should_establish_connection():
             self.send_syn_ack()
+
+        if ('R' in self.tcp_rcv_flags):
+            if ('A' in self.tcp_rcv_flags):
+                self.send_rst_ack()
+            else:
+                self.send_rst()
+
+        if ('F' in self.tcp_rcv_flags):
+            self.tcp_rcv_len += 1
+            if ('A' in self.tcp_rcv_flags):
+                self.send_fin_ack()
+
+
+    def send_fin_ack(self):
+        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
+                                 , dport = self.tcp_sport
+                                 , seq = self.tcp_snd_seq
+                                 , ack = self.tcp_rcv_seq + self.tcp_rcv_len
+                                 , window = self.window_size()
+                                 , flags = 'FA')
+
+        self.send_packet(tcp_packet)
+        self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+                        , 'FA', self.tcp_snd_seq, self.tcp_snd_ack)
+        
+
+    def send_rst(self):
+        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
+                                 , dport = self.tcp_sport
+                                 , seq = self.tcp_snd_seq
+                                 , window = self.window_size()
+                                 , flags = 'R')
+
+        self.send_packet(tcp_packet)
+        self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+                        , 'R', self.tcp_snd_seq, self.tcp_snd_ack)
+        
 
     def send_syn_ack(self):
         """
@@ -69,13 +111,14 @@ class Tcp(handler.ip.Ip):
 
         latency = self.latency(self.dst_ip)
 
-        self.tcp_snd_seq = self.initial_seq_number()
+        isn = self.initial_seq_number()
+        self.tcp_snd_seq = isn + 1
         self.tcp_snd_ack = self.tcp_rcv_seq + 1
         self.state = 'SYN-RECEIVED'
 
         tcp_packet = scapy.all.TCP(sport = self.tcp_dport
                                  , dport = self.tcp_sport
-                                 , seq = self.tcp_snd_seq
+                                 , seq = isn
                                  , ack = self.tcp_snd_ack
                                  , window = self.window_size()
                                  , flags = 'SA')
