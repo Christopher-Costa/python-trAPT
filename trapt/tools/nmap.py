@@ -209,7 +209,7 @@ def scan_options_1(conn):
             ('NOP', None), 
             ('WScale', 8), 
             ('SAckOK', b''), 
-            ('Timestamp', (1, conn.tcp_rcv_timestamp()))]
+            ('Timestamp', (conn.tcp_snd_timestamp(), conn.tcp_rcv_timestamp()))]
 
 def scan_options_2(conn):
     return [('MSS', 1366), 

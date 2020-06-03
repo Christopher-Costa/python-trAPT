@@ -31,7 +31,7 @@ class Receiver():
             handler.arp.Arp(frame, self.trapt, self.interface)
 
         elif frame.haslayer(scapy.all.ICMP):
-            handler.icmp.Icmp(frame, self.trapt, self.interface)
+            handler.icmp.Icmp(frame, self.trapt, self.interface, None)
 
         elif frame.haslayer(scapy.all.UDP):
             handler.udp.Udp(frame, self.trapt, self.interface)

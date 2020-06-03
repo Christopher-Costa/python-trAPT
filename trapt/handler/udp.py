@@ -1,4 +1,3 @@
-import handler.ip
 import scapy.all
 import tools.nmap
 import handler.udp
@@ -25,8 +24,10 @@ class Udp(handler.ip.Ip):
         """
 
         if tools.nmap.is_scan_packet_u1(self):
-            icmp_response = handler.icmp.Icmp(self.frame, self.trapt, self.interface)
-            icmp_response.send_dest_port_unreachable()
+            icmp_response = handler.icmp.Icmp(self.frame, self.trapt, self.interface, self)
+            # TODO:  nmap fails to fingerprint this correctly as Windows 2012 when the U1 probe
+            #        gets a response.  Not sure why, yet.
+            #icmp_response.send_dest_port_unreachable()
 
         self.log_packet('received', self.dst_ip, self.udp_dport, self.src_ip, self.udp_sport)
 

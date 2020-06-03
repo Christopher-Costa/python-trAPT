@@ -4,14 +4,15 @@ import tools.nmap
 
 class Icmp(handler.ip.Ip):
     
-    def __init__(self, frame, trapt, interface):
+    def __init__(self, frame, trapt, interface, trigger):
         handler.ip.Ip.__init__(self, frame, trapt, interface)
 
         self.frame = frame
+        self.trigger = trigger
 
         # It's possible that a non-ICMP frame can trigger an
         # ICMP response.  Don't try to handle those.
-        if frame.haslayer(scapy.all.ICMP):
+        if not self.trigger:
             self.handle()
 
     def handle(self):
@@ -49,10 +50,8 @@ class Icmp(handler.ip.Ip):
                         , 'sent' , self.dst_ip, self.src_ip)
 
     def send_dest_port_unreachable(self):
-        payload_bytes = self.frame[scapy.all.IP].ihl * 4 + 64
-
         icmp_packet = scapy.all.ICMP(type = 3, code = 3, id = 1, seq = 1)
-        icmp_payload = scapy.all.Raw(bytes(self.frame[scapy.all.IP])[0:payload_bytes])
+        icmp_payload = scapy.all.Raw(bytes(self.frame[scapy.all.IP]))
 
         self.send_packet(icmp_packet / icmp_payload)
         self.log_packet('3', '3', '1', '1', 'sent', self.dst_ip, self.src_ip)

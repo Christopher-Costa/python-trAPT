@@ -476,7 +476,7 @@ class Tcp(handler.ip.Ip):
     def send_scan_ecn_response(self):
         seq = 0
         ack = self.tcp_rcv_seq() + 1
-        window = 2000
+        window = self.tcp_snd_window()
         flags = 'SAE'
         options = tools.nmap.scan_options_ecn(self)
 

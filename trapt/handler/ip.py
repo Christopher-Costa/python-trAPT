@@ -1,6 +1,8 @@
 import handler.handler
 import scapy.all
 import time
+import tools.nmap
+import random
 
 class Ip(handler.handler.Handler):
 
@@ -56,7 +58,8 @@ class Ip(handler.handler.Handler):
             Ip.host_table[self.dst_ip]['last_isn'] = 1000000
 
         Ip.host_table[self.dst_ip]['last_isn_time'] = current_time
-        return (Ip.host_table[self.dst_ip]['last_isn'])
+        return (random.randrange(0XFFFFFFFF))
+        #return (Ip.host_table[self.dst_ip]['last_isn'])
        
     def send_packet (self, payload):
         """
@@ -77,6 +80,18 @@ class Ip(handler.handler.Handler):
         return self.frame[scapy.all.IP].flags
 
     def ip_snd_flags(self):
+        try:
+            if self.trigger:
+                if tools.nmap.is_scan_packet_u1(self.trigger):
+                    return ''
+
+        except AttributeError:
+            pass
+
+        if self.is_icmp():
+            if tools.nmap.is_scan_packet_ie1(self) or tools.nmap.is_scan_packet_ie2(self):
+                return ''
+
         return 'DF'
 
     def ip_rcv_tos(self):
@@ -87,3 +102,6 @@ class Ip(handler.handler.Handler):
 
     def ip_rcv_id(self):
         return self.frame[scapy.all.IP].id
+
+    def is_icmp(self):
+        return self.frame.haslayer(scapy.all.ICMP)
