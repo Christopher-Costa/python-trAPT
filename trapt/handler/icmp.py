@@ -1,22 +1,18 @@
 import handler.ip
 import scapy.all
+import tools.nmap
 
 class Icmp(handler.ip.Ip):
     
     def __init__(self, frame, trapt, interface):
         handler.ip.Ip.__init__(self, frame, trapt, interface)
 
-        self.icmp_id = self.frame[scapy.all.ICMP].id
-        self.icmp_seq = self.frame[scapy.all.ICMP].seq
-        self.icmp_type = self.frame[scapy.all.ICMP].type
-        self.icmp_code = self.frame[scapy.all.ICMP].code
+        self.frame = frame
 
-        if frame.haslayer(scapy.all.Raw):
-            self.payload = self.frame[scapy.all.Raw].load
-        else:
-            self.payload = ''
-
-        self.handle()
+        # It's possible that a non-ICMP frame can trigger an
+        # ICMP response.  Don't try to handle those.
+        if frame.haslayer(scapy.all.ICMP):
+            self.handle()
 
     def handle(self):
         """
@@ -25,28 +21,42 @@ class Icmp(handler.ip.Ip):
         or invoking other handlers.
         """
 
-        self.log_packet(self.icmp_type, self.icmp_code
-                        , self.icmp_id, self.icmp_seq, 'received'
+        self.log_packet(self.icmp_rcv_type(), self.icmp_rcv_code()
+                        , self.icmp_rcv_id(), self.icmp_rcv_seq(), 'received'
                         , self.src_ip, self.dst_ip)
+
+        if tools.nmap.is_scan_packet_ie1(self):
+            self.send_echo_reply()
+            return
+
+        if tools.nmap.is_scan_packet_ie2(self):
+            self.send_echo_reply()
+            return
 
         if self.is_echo_request():
             if self.should_reply():
-                latency = self.latency(self.dst_ip)
-                packet = {}
-                packet['IP'] = scapy.all.IP(src = self.dst_ip
-                                            , dst = self.src_ip) 
+                self.send_echo_reply() 
 
-                packet['ICMP'] = scapy.all.ICMP(type = 0
-                                                , code = 0
-                                                , id = self.icmp_id
-                                                , seq = self.icmp_seq)
 
-                self.log_packet("0", "0"
-                                , self.icmp_id, self.icmp_seq, 'sent'
-                                , self.dst_ip, self.src_ip)
- 
+    def send_echo_reply(self):
+        icmp_packet = scapy.all.ICMP(type = 0
+                                   , code = 0
+                                   , id = self.icmp_rcv_id()
+                                   , seq = self.icmp_rcv_seq())
 
-                self.send_packet(packet['ICMP']/scapy.all.Raw(self.payload)) 
+        self.send_packet(icmp_packet/scapy.all.Raw(self.icmp_rcv_payload())) 
+        self.log_packet("0", "0", self.icmp_rcv_id(), self.icmp_rcv_seq()
+                        , 'sent' , self.dst_ip, self.src_ip)
+
+    def send_dest_port_unreachable(self):
+        payload_bytes = self.frame[scapy.all.IP].ihl * 4 + 64
+
+        icmp_packet = scapy.all.ICMP(type = 3, code = 3, id = 1, seq = 1)
+        icmp_payload = scapy.all.Raw(bytes(self.frame[scapy.all.IP])[0:payload_bytes])
+
+        print(icmp_payload.show())
+        self.send_packet(icmp_packet / icmp_payload)
+        self.log_packet("0", "0", "1", "1", 'sent', self.dst_ip, self.src_ip)
 
     def is_echo_request(self):
         """
@@ -54,7 +64,7 @@ class Icmp(handler.ip.Ip):
         ICMP Echo Request.
         """
 
-        return str(self.icmp_type) == '8'
+        return str(self.icmp_rcv_type()) == '8'
 
     def is_echo_reply(self):
         """
@@ -62,7 +72,7 @@ class Icmp(handler.ip.Ip):
         ICMP Echo Reply.
         """
 
-        return str(self.icmp_type) == '0'
+        return str(self.icmp_rcv_type()) == '0'
 
     def should_reply(self):
         """
@@ -106,6 +116,39 @@ class Icmp(handler.ip.Ip):
         """
 
         log_message = 'ICMP {0} {1}: {2} -> {3}, id={4} seq={5}'.format(
-                self.icmp_name(type, code), direction, src_ip, dst_ip, id, seq)
+                Icmp.icmp_name(self, type, code), direction, src_ip, dst_ip, id, seq)
 
         self.trapt.logger['network'].logger.info(log_message)
+
+    def icmp_rcv_code(self):
+        return self.frame[scapy.all.ICMP].code
+
+    def icmp_rcv_type(self):
+        return self.frame[scapy.all.ICMP].type
+
+    def icmp_rcv_seq(self):
+        return self.frame[scapy.all.ICMP].seq
+
+    def icmp_rcv_len(self):
+        if self.frame.haslayer(scapy.all.Raw):
+            return len(self.frame[scapy.all.Raw].load)
+        else:
+            return 0 
+
+    def icmp_rcv_id(self):
+        return self.frame[scapy.all.ICMP].id
+
+    def icmp_rcv_seq(self):
+        return self.frame[scapy.all.ICMP].seq
+
+    def icmp_rcv_type(self):
+        return self.frame[scapy.all.ICMP].type
+
+    def icmp_rcv_code(self):
+        return self.frame[scapy.all.ICMP].code
+
+    def icmp_rcv_payload(self):
+        if self.frame.haslayer(scapy.all.Raw):
+            return self.frame[scapy.all.Raw].load
+        else:
+            return ''

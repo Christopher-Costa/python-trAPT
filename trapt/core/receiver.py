@@ -3,6 +3,7 @@ import scapy.all
 import handler.arp
 import handler.icmp
 import handler.tcp
+import handler.udp
 import configparser
 import time
 
@@ -31,6 +32,9 @@ class Receiver():
 
         elif frame.haslayer(scapy.all.ICMP):
             handler.icmp.Icmp(frame, self.trapt, self.interface)
+
+        elif frame.haslayer(scapy.all.UDP):
+            handler.udp.Udp(frame, self.trapt, self.interface)
 
         elif frame.haslayer(scapy.all.TCP):
             if handler.tcp.connection_exists(frame):

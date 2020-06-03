@@ -170,6 +170,40 @@ def is_scan_packet_t7(conn):
                     return True
     return False
 
+def is_scan_packet_ecn(conn):
+    if conn.is_tcp_rcv_flags_SEC():
+        if conn.tcp_rcv_reserved() == 4:
+            if conn.tcp_rcv_urgptr() == 0xF7F5:
+                if conn.tcp_rcv_window() == 3:
+                    return True
+    return False
+
+def is_scan_packet_ie1(conn):
+    if conn.ip_rcv_flags() == 'DF':
+        if conn.ip_rcv_tos() == 0:
+            if conn.icmp_rcv_type() == 8:
+                if conn.icmp_rcv_code() == 9:
+                    if conn.icmp_rcv_seq() == 295:
+                        if conn.icmp_rcv_len() == 120:
+                            return True
+    return False
+
+def is_scan_packet_ie2(conn):
+    if conn.ip_rcv_tos() == 4:
+        if conn.icmp_rcv_type() == 8:
+            if conn.icmp_rcv_code() == 0:
+                if conn.icmp_rcv_seq() == 296:
+                    if conn.icmp_rcv_len() == 150:
+                        return True
+    return False
+
+def is_scan_packet_u1(conn):
+    if conn.ip_rcv_proto() == 17:
+        if conn.ip_rcv_id() == 0x1042:
+            if conn.udp_rcv_len() == 300:
+                return True
+    return False
+
 def scan_options_1(conn):
     return [('MSS', 1366), 
             ('NOP', None), 
@@ -210,3 +244,11 @@ def scan_options_6(conn):
     return [('MSS', 1366),
             ('SAckOK', b''), 
             ('Timestamp', (conn.tcp_snd_timestamp(), conn.tcp_rcv_timestamp()))]
+
+def scan_options_ecn(conn):
+    return [('MSS', 1366), 
+            ('NOP', None), 
+            ('WScale', 8), 
+            ('NOP', None), 
+            ('NOP', None), 
+            ('SAckOK', b'')]

@@ -40,6 +40,6 @@ def port_list(port_range):
 
         port_list = []
         for port in range(int(start_port), int(end_port)+1):
-            port_list.append(str(port))
+            port_list.append(port)
         return port_list
 

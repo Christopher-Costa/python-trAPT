@@ -85,6 +85,10 @@ class Tcp(handler.ip.Ip):
             self.send_scan_t7_response()
             return
 
+        if tools.nmap.is_scan_packet_ecn(self):
+            self.send_scan_ecn_response()
+            return
+
         if self.port_disposition() == 'reset':
             self.send_rst()
             return
@@ -252,6 +256,18 @@ class Tcp(handler.ip.Ip):
                 return True
         return False
 
+    def is_tcp_rcv_flags_SEC(self):
+        if ('S' in self.frame[scapy.all.TCP].flags
+            and not 'A' in self.frame[scapy.all.TCP].flags
+            and not 'F' in self.frame[scapy.all.TCP].flags
+            and not 'R' in self.frame[scapy.all.TCP].flags
+            and not 'P' in self.frame[scapy.all.TCP].flags
+            and not 'U' in self.frame[scapy.all.TCP].flags
+            and 'E' in self.frame[scapy.all.TCP].flags
+            and 'C' in self.frame[scapy.all.TCP].flags):
+                return True
+        return False
+
     def is_tcp_rcv_flags_A(self):
         if ('A' in self.frame[scapy.all.TCP].flags
             and not 'S' in self.frame[scapy.all.TCP].flags
@@ -336,6 +352,12 @@ class Tcp(handler.ip.Ip):
 
     def tcp_rcv_options(self):
         return self.frame[scapy.all.TCP].options
+
+    def tcp_rcv_urgptr(self):
+        return self.frame[scapy.all.TCP].urgptr
+
+    def tcp_rcv_reserved(self):
+        return self.frame[scapy.all.TCP].reserved
 
     def tcp_rcv_len(self):
         len = 0
@@ -449,5 +471,24 @@ class Tcp(handler.ip.Ip):
 
         self.send_packet(tcp_packet)
         self.log_packet('sent NMAP T7 response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+                        , flags, seq, ack)
+
+    def send_scan_ecn_response(self):
+        seq = 0
+        ack = self.tcp_rcv_seq() + 1
+        window = 2000
+        flags = 'SAE'
+        options = tools.nmap.scan_options_ecn(self)
+
+        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
+                                 , dport = self.tcp_sport
+                                 , seq = seq
+                                 , ack = ack
+                                 , window = window
+                                 , options = options
+                                 , flags = flags)
+
+        self.send_packet(tcp_packet)
+        self.log_packet('sent NMAP ECN response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
                         , flags, seq, ack)
 

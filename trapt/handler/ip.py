@@ -12,6 +12,9 @@ class Ip(handler.handler.Handler):
         self.src_ip = self.frame[scapy.all.IP].src
         self.dst_ip = self.frame[scapy.all.IP].dst
 
+        self.trapt = trapt
+        self.interface = interface
+
     def ip_id (self):
         """
         Function to return a valid IP Identifier for this host, to use 
@@ -75,3 +78,12 @@ class Ip(handler.handler.Handler):
 
     def ip_snd_flags(self):
         return 'DF'
+
+    def ip_rcv_tos(self):
+        return self.frame[scapy.all.IP].tos
+
+    def ip_rcv_proto(self):
+        return self.frame[scapy.all.IP].proto
+
+    def ip_rcv_id(self):
+        return self.frame[scapy.all.IP].id
