@@ -54,9 +54,8 @@ class Icmp(handler.ip.Ip):
         icmp_packet = scapy.all.ICMP(type = 3, code = 3, id = 1, seq = 1)
         icmp_payload = scapy.all.Raw(bytes(self.frame[scapy.all.IP])[0:payload_bytes])
 
-        print(icmp_payload.show())
         self.send_packet(icmp_packet / icmp_payload)
-        self.log_packet("0", "0", "1", "1", 'sent', self.dst_ip, self.src_ip)
+        self.log_packet('3', '3', '1', '1', 'sent', self.dst_ip, self.src_ip)
 
     def is_echo_request(self):
         """
@@ -102,11 +101,14 @@ class Icmp(handler.ip.Ip):
         """
 
         if str(type) == '0':
-            return "Echo Reply"
+            return 'Echo Reply'
         elif str(type) == '8':
-            return "Echo Request"
+            return 'Echo Request'
+        elif str(type) == '3':
+            if str(type) == '3':
+                return 'Port Unreachable'
         else:
-            return "Unknown"
+            return 'Unknown'
 
 
     def log_packet (self, type, code, id, seq, direction, src_ip, dst_ip):
