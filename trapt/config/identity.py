@@ -1,5 +1,6 @@
 identities = {
     'Windows_Server_2012': {
+        'ISN': 'random',
         'MSS': 1460,
         'Window': 8192,
         'WScale': 8,

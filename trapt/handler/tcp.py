@@ -196,24 +196,10 @@ class Tcp(handler.ip.Ip):
         place in the transmit queue.
         """
 
-        latency = self.latency(self.dst_ip)
-
-        isn = self.initial_seq_number()
-        self.tcp_snd_seq = isn + 1
-        self.tcp_snd_ack = self.tcp_rcv_seq() + self.tcp_rcv_len()
         self.state = 'SYN-RECEIVED'
-
-        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
-                                 , dport = self.tcp_sport
-                                 , seq = isn
-                                 , ack = self.tcp_snd_ack
-                                 , options = self.tcp_snd_options()
-                                 , window = self.tcp_snd_window()
-                                 , flags = 'SA')
-
-        self.send_packet(tcp_packet) 
-        self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
-                        , 'SA', self.tcp_snd_seq, self.tcp_snd_ack)
+        self.tcp_snd_seq = self.initial_seq_number()
+        self.send_tcp_packet(flags = 'SA')
+        self.tcp_snd_seq += 1
 
     def port_disposition(self):
         """
@@ -512,37 +498,32 @@ class Tcp(handler.ip.Ip):
                         , flags, seq, ack)
 
     def send_scan_t7_response(self):
-        seq = 0
-        ack = self.tcp_rcv_seq() + 1
-        window = 0
-        flags = 'RA'
-
-        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
-                                 , dport = self.tcp_sport
-                                 , seq = seq
-                                 , ack = ack
-                                 , window = window
-                                 , flags = flags)
-
-        self.send_packet(tcp_packet)
-        self.log_packet('sent NMAP T7 response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
-                        , flags, seq, ack)
+        self.send_tcp_packet(flags = 'RA', window = 0, description = 'NMAP T7 response')
 
     def send_scan_ecn_response(self):
-        seq = 0
-        ack = self.tcp_rcv_seq() + 1
-        window = self.tcp_snd_window()
-        flags = 'SAE'
+        self.state = 'SYN-RECEIVED'
+        self.tcp_snd_seq = self.initial_seq_number()
+        self.send_tcp_packet(flags = 'SAE', description = 'NMAP ECN response')
+        self.tcp_snd_seq += 1
 
-        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
-                                 , dport = self.tcp_sport
-                                 , seq = seq
-                                 , ack = ack
-                                 , window = window
-                                 , options = self.tcp_snd_options()
-                                 , flags = flags)
+    def send_tcp_packet(self, flags, sport = None, dport = None, seq = None, ack = None
+                                   , window = None, options = None, description = None):
+        
+        tcp_packet = scapy.all.TCP()
+        tcp_packet.sport = sport or self.tcp_dport
+        tcp_packet.dport = dport or self.tcp_sport
+        tcp_packet.seq = seq or self.tcp_snd_seq
+        tcp_packet.ack = ack or self.tcp_rcv_seq() + self.tcp_rcv_len()
+        tcp_packet.window = self.tcp_snd_window() if window is None else window
+        tcp_packet.options = options or self.tcp_snd_options()
+        tcp_packet.flags = flags
+
+        print (tcp_packet.window)
+
+        direction = 'sent'
+        if description:
+            direction += ' ' + description
 
         self.send_packet(tcp_packet)
-        self.log_packet('sent NMAP ECN response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
-                        , flags, seq, ack)
-
+        self.log_packet(direction, self.dst_ip, tcp_packet.dport, self.src_ip, tcp_packet.sport
+                                 , tcp_packet.flags, tcp_packet.seq, tcp_packet.ack)

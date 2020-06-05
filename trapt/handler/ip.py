@@ -1,4 +1,5 @@
 import handler.handler
+import config.identity
 import scapy.all
 import time
 import tools.nmap
@@ -44,22 +45,10 @@ class Ip(handler.handler.Handler):
         it isn't neccesarily strictly random.
         """
 
-        current_time = time.time()
-
-        if not self.dst_ip in Ip.host_table:
-            Ip.host_table[self.dst_ip] = {}
-       
-        if 'last_isn' in Ip.host_table[self.dst_ip]:
-            last_isn = Ip.host_table[self.dst_ip]['last_isn']
-            last_time = Ip.host_table[self.dst_ip]['last_isn_time']
-
-            Ip.host_table[self.dst_ip]['last_isn'] = (last_isn + int(268 * (current_time - last_time))) % 0xFFFFFFFF
-        else:
-            Ip.host_table[self.dst_ip]['last_isn'] = 1000000
-
-        Ip.host_table[self.dst_ip]['last_isn_time'] = current_time
-        return (random.randrange(0XFFFFFFFF))
-        #return (Ip.host_table[self.dst_ip]['last_isn'])
+        identity = self.trapt.config['host'].interfaces[self.dst_ip]['identity']
+        
+        if (config.identity.identities[identity]['ISN'] == 'random'):
+            return (random.randrange(0XFFFFFFFF))
        
     def send_packet (self, payload):
         """
