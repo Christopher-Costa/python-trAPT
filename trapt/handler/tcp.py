@@ -92,7 +92,7 @@ class Tcp(handler.ip.Ip):
             return
 
         if self.port_disposition() == 'reset':
-            self.send_rst()
+            self.send_rst_ack()
             return
 
         if self.should_establish_connection():
@@ -169,6 +169,25 @@ class Tcp(handler.ip.Ip):
         self.remove_connection()
         self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
                         , 'R', self.tcp_snd_seq, self.tcp_snd_ack)
+        
+    def send_rst_ack(self):
+        if (self.tcp_snd_seq == 0):
+            window = 0
+        else:
+            window = self.tcp_snd_window()
+
+        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
+                                 , dport = self.tcp_sport
+                                 , seq = self.tcp_snd_seq
+                                 , ack = self.tcp_rcv_seq() + self.tcp_rcv_len() 
+                                 , options = self.tcp_snd_options()
+                                 , window = window
+                                 , flags = 'RA')
+
+        self.send_packet(tcp_packet)
+        self.remove_connection()
+        self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
+                        , 'RA', self.tcp_snd_seq, self.tcp_snd_ack)
         
 
     def send_syn_ack(self):
@@ -303,6 +322,11 @@ class Tcp(handler.ip.Ip):
             return True
         return False
 
+    def has_tcp_rcv_flags_A(self):
+        if 'A' in self.frame[scapy.all.TCP].flags:
+            return True
+        return False
+
     def has_tcp_rcv_flags_F(self):
         if 'F' in self.frame[scapy.all.TCP].flags:
             return True
@@ -386,7 +410,10 @@ class Tcp(handler.ip.Ip):
             len = len(frame[scapy.all.Raw].load)
 
         # SYN and FIN count as a byte for purposes of acknowledging
-        if (self.has_tcp_rcv_flags_S() or self.has_tcp_rcv_flags_F()):
+        if (self.has_tcp_rcv_flags_S()):
+            len += 1
+
+        if (self.has_tcp_rcv_flags_F()):
             len += 1
 
         return len

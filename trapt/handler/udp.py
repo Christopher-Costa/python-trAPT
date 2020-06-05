@@ -27,7 +27,13 @@ class Udp(handler.ip.Ip):
             icmp_response = handler.icmp.Icmp(self.frame, self.trapt, self.interface, self)
             # TODO:  nmap fails to fingerprint this correctly as Windows 2012 when the U1 probe
             #        gets a response.  Not sure why, yet.
-            #icmp_response.send_dest_port_unreachable()
+            icmp_response.send_dest_port_unreachable()
+            return
+
+        if self.port_disposition() == 'reset':
+            icmp_response = handler.icmp.Icmp(self.frame, self.trapt, self.interface, self)
+            icmp_response.send_dest_port_unreachable()
+            return
 
         self.log_packet('received', self.dst_ip, self.udp_dport, self.src_ip, self.udp_sport)
 
