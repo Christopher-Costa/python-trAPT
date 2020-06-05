@@ -464,21 +464,7 @@ class Tcp(handler.ip.Ip):
                         , flags, seq, ack)
 
     def send_scan_t5_response(self):
-        seq = 0
-        ack = self.tcp_rcv_seq() + 1
-        window = 0
-        flags = 'RA'
-
-        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
-                                 , dport = self.tcp_sport
-                                 , seq = seq
-                                 , ack = ack
-                                 , window = window
-                                 , flags = flags)
-
-        self.send_packet(tcp_packet)
-        self.log_packet('sent NMAP T5 response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
-                        , flags, seq, ack)
+        self.send_tcp_packet(flags = 'RA', window = 0, description = 'NMAP T5 response')
 
     def send_scan_t6_response(self):
         self.tcp_snd_seq = self.tcp_rcv_ack()
