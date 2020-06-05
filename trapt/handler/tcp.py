@@ -413,38 +413,10 @@ class Tcp(handler.ip.Ip):
         return config.identity.identities[identity]['WScale']
 
     def send_scan_t2_response(self):
-        seq = 0
-        ack = self.tcp_rcv_seq()
-        window = 0
-        flags = 'RA'
-
-        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
-                                 , dport = self.tcp_sport
-                                 , seq = seq
-                                 , ack = ack
-                                 , window = window
-                                 , flags = flags)
-
-        self.send_packet(tcp_packet)
-        self.log_packet('sent NMAP T2 response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
-                        , flags, seq, ack)
+        self.send_tcp_packet(flags = 'RA', window = 0, description = 'NMAP T2 response')
 
     def send_scan_t3_response(self):
-        seq = 0
-        ack = 1
-        window = 0
-        flags = 'RA'
-
-        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
-                                 , dport = self.tcp_sport
-                                 , seq = seq
-                                 , ack = ack
-                                 , window = window
-                                 , flags = flags)
-
-        self.send_packet(tcp_packet)
-        self.log_packet('sent NMAP T3 response', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
-                        , flags, seq, ack)
+        self.send_tcp_packet(flags = 'RA', ack = 1, window = 0, description = 'NMAP T3 response')
 
     def send_scan_t4_response(self):
         self.tcp_snd_seq = self.tcp_rcv_ack()
