@@ -4,7 +4,7 @@ def is_integer(integer_string):
     integer and False otherwise.
     """
 
-    if integer_string == "0":
+    if integer_string == 0:
         return True
 
     try:
