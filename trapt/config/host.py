@@ -1,4 +1,5 @@
 import config.yaml
+import config.identity
 import tools.ip
 import tools.port
 import sys
@@ -25,6 +26,7 @@ class Host(config.yaml.Yaml):
         Host configurations are expected in the following format:
 
             <IP address or address range>:
+                identity: <type of host (OS)>
                 gateway: <next hop IP address>
                 default_state: <blocked|open|reset>
                 ports:
@@ -36,9 +38,24 @@ class Host(config.yaml.Yaml):
         If problems are detected, Print an informative message 
         and exit the program.
         """
-
+        main_config = self.trapt.config['main']
         self.errors = []
+
         for hosts in self.config:
+            #identity = None
+            if (not 'identity' in self.config[hosts]):
+                if (not 'default_identity' in main_config.settings['general']):
+                    error_message = 'host "{0}" does not have an identity, and no default is defined.'
+                    self.errors.append(error_message.format(hosts))
+                else:
+                    identity = main_config.settings['general']['default_identity']
+            else:
+                identity = self.config[hosts]['identity']
+
+            if not identity in config.identity.identities:
+                error_message = 'host "{0}" associates with an undefined identity "{1}".'
+                self.errors.append(error_message.format(hosts, identity))
+
             if (not tools.ip.is_ipv4_address(hosts) 
                     and not tools.ip.is_ipv4_range(hosts)):
                 error_message = 'host "{0}" is not a valid IPv4 address or IPv4 range.'
@@ -57,7 +74,7 @@ class Host(config.yaml.Yaml):
             self.validate_port_configuration(self.config[hosts]['ports'])
 
         if self.errors:
-            for error in errors:
+            for error in self.errors:
                 error_message = 'Error in host config: {0}'
                 self.trapt.logger['app'].logger.error(error_message.format(error))
             sys.exit()
@@ -68,6 +85,12 @@ class Host(config.yaml.Yaml):
             gateway = self.config[hosts]['gateway']
             default_state = self.config[hosts]['default_state']
             ports = self.config[hosts]['ports']
+
+            if 'identity' in self.config[hosts]:
+                identity = self.config[hosts]['identity']
+            else:
+                identity = self.trapt.config['main'].settings['general']['default_identity']
+
             if gateway in self.trapt.config['router'].interfaces:
                 network = self.trapt.config['router'].interfaces[gateway]['network']
                 latency = self.trapt.config['router'].route_table[network]['latency']
@@ -88,6 +111,7 @@ class Host(config.yaml.Yaml):
                 self.interfaces[host]['latency'] = latency
                 self.interfaces[host]['external'] = external
                 self.interfaces[host]['default_state'] = default_state
+                self.interfaces[host]['identity'] = identity
 
                 for protocol in ('tcp', 'udp'): 
                     if protocol in ports:

@@ -1,3 +1,4 @@
+import config.identity
 import handler.handler
 import handler.ip
 import tools.nmap
@@ -61,6 +62,7 @@ class Tcp(handler.ip.Ip):
         self.log_packet('received', self.src_ip, self.tcp_sport, self.dst_ip, self.tcp_dport
                         , self.tcp_rcv_flags(), self.tcp_rcv_seq(), self.tcp_rcv_ack())
 
+
         if tools.nmap.is_scan_packet_t2(self):
             self.send_scan_t2_response()
             return
@@ -107,19 +109,36 @@ class Tcp(handler.ip.Ip):
 
     def tcp_snd_options(self):
         snd_options = list()       
- 
+        option_ordering = list()
+
+        identity = self.trapt.config['host'].interfaces[self.dst_ip]['identity']
+
         if (tools.nmap.is_scan_packet_1(self)):
-            snd_options = tools.nmap.scan_options_1(self)
-        if (tools.nmap.is_scan_packet_2(self)):
-            snd_options = tools.nmap.scan_options_2(self)
-        if (tools.nmap.is_scan_packet_3(self)):
-            snd_options = tools.nmap.scan_options_3(self)
-        if (tools.nmap.is_scan_packet_4(self)):
-            snd_options = tools.nmap.scan_options_4(self)
-        if (tools.nmap.is_scan_packet_5(self)):
-            snd_options = tools.nmap.scan_options_5(self)
-        if (tools.nmap.is_scan_packet_6(self)):
-            snd_options = tools.nmap.scan_options_6(self)
+            option_ordering = config.identity.identities[identity]['Options']['O1']
+        elif (tools.nmap.is_scan_packet_2(self)):
+            option_ordering = config.identity.identities[identity]['Options']['O2']
+        elif (tools.nmap.is_scan_packet_3(self)):
+            option_ordering = config.identity.identities[identity]['Options']['O3']
+        elif (tools.nmap.is_scan_packet_4(self)):
+            option_ordering = config.identity.identities[identity]['Options']['O4']
+        elif (tools.nmap.is_scan_packet_5(self)):
+            option_ordering = config.identity.identities[identity]['Options']['O5']
+        elif (tools.nmap.is_scan_packet_6(self)):
+            option_ordering = config.identity.identities[identity]['Options']['O6']
+        elif (tools.nmap.is_scan_packet_ecn(self)):
+            option_ordering = config.identity.identities[identity]['Options']['ECN']
+
+        for option in option_ordering:
+            if option == 'M':
+                snd_options.append(('MSS', self.tcp_snd_mss()))
+            if option == 'N':
+                snd_options.append(('NOP', None))
+            if option == 'W':
+                snd_options.append(('WScale', self.tcp_snd_wscale()))
+            if option == 'S':
+                snd_options.append(('SAckOK', b''))
+            if option == 'T':
+                snd_options.append(('Timestamp', (self.tcp_snd_timestamp(), self.tcp_rcv_timestamp())))
 
         return snd_options
 
@@ -213,7 +232,8 @@ class Tcp(handler.ip.Ip):
         """
         Function to return a suitable TCP Window Size
         """
-        return(8192)
+        identity = self.trapt.config['host'].interfaces[self.dst_ip]['identity']
+        return config.identity.identities[identity]['Window']
 
     def log_packet (self, direction, src_ip, sport, dst_ip, dport, flags, seq, ack):
         """
@@ -371,6 +391,14 @@ class Tcp(handler.ip.Ip):
 
         return len
 
+    def tcp_snd_mss(self):
+        identity = self.trapt.config['host'].interfaces[self.dst_ip]['identity']
+        return config.identity.identities[identity]['MSS']
+
+    def tcp_snd_wscale(self):
+        identity = self.trapt.config['host'].interfaces[self.dst_ip]['identity']
+        return config.identity.identities[identity]['WScale']
+
     def send_scan_t2_response(self):
         seq = 0
         ack = self.tcp_rcv_seq()
@@ -478,14 +506,13 @@ class Tcp(handler.ip.Ip):
         ack = self.tcp_rcv_seq() + 1
         window = self.tcp_snd_window()
         flags = 'SAE'
-        options = tools.nmap.scan_options_ecn(self)
 
         tcp_packet = scapy.all.TCP(sport = self.tcp_dport
                                  , dport = self.tcp_sport
                                  , seq = seq
                                  , ack = ack
                                  , window = window
-                                 , options = options
+                                 , options = self.tcp_snd_options()
                                  , flags = flags)
 
         self.send_packet(tcp_packet)
