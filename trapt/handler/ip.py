@@ -50,17 +50,20 @@ class Ip(handler.handler.Handler):
         if (config.identity.identities[identity]['ISN'] == 'random'):
             return (random.randrange(0XFFFFFFFF))
        
-    def send_packet (self, payload):
+    def send_ip_packet (self, payload):
         """
         Function to assemble complete IP Packets, with payload passed from
         inheriting modules, and enqueue these packets for transmission.
         """
+        identity = self.trapt.config['host'].interfaces[self.dst_ip]['identity']
 
         latency = self.latency(self.dst_ip)
+        ttl = config.identity.identities[identity]['TTL']
+
         ip_packet = scapy.all.IP(src = self.dst_ip,
                                  dst = self.src_ip,
                                  id = self.ip_id(),
-                                 ttl = 127,
+                                 ttl = ttl,
                                  flags = self.ip_snd_flags())
  
         self.interface.transmitter.enqueue({ 'frame' : ip_packet/payload, 'latency' : latency })

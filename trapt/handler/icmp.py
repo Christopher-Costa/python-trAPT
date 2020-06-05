@@ -45,7 +45,7 @@ class Icmp(handler.ip.Ip):
                                    , id = self.icmp_rcv_id()
                                    , seq = self.icmp_rcv_seq())
 
-        self.send_packet(icmp_packet/scapy.all.Raw(self.icmp_rcv_payload())) 
+        self.send_ip_packet(icmp_packet/scapy.all.Raw(self.icmp_rcv_payload())) 
         self.log_packet("0", "0", self.icmp_rcv_id(), self.icmp_rcv_seq()
                         , 'sent' , self.dst_ip, self.src_ip)
 
@@ -53,7 +53,7 @@ class Icmp(handler.ip.Ip):
         icmp_packet = scapy.all.ICMP(type = 3, code = 3, id = 1, seq = 1)
         icmp_payload = scapy.all.Raw(bytes(self.frame[scapy.all.IP]))
 
-        self.send_packet(icmp_packet / icmp_payload)
+        self.send_ip_packet(icmp_packet / icmp_payload)
         self.log_packet('3', '3', '1', '1', 'sent', self.dst_ip, self.src_ip)
 
     def is_echo_request(self):

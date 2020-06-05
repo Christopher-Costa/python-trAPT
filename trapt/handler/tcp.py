@@ -143,52 +143,16 @@ class Tcp(handler.ip.Ip):
         return snd_options
 
     def send_fin_ack(self):
-        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
-                                 , dport = self.tcp_sport
-                                 , seq = self.tcp_snd_seq
-                                 , ack = self.tcp_rcv_seq() + self.tcp_rcv_len()
-                                 , options = self.tcp_snd_options()
-                                 , window = self.tcp_snd_window()
-                                 , flags = 'FA')
-
-        self.send_packet(tcp_packet)
+        self.send_tcp_packet(flags = 'FA')
         self.remove_connection()
-        self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
-                        , 'FA', self.tcp_snd_seq, self.tcp_snd_ack)
-        
 
     def send_rst(self):
-        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
-                                 , dport = self.tcp_sport
-                                 , seq = self.tcp_snd_seq
-                                 , options = self.tcp_snd_options()
-                                 , window = self.tcp_snd_window()
-                                 , flags = 'R')
-
-        self.send_packet(tcp_packet)
+        self.send_tcp_packet(flags = 'R')
         self.remove_connection()
-        self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
-                        , 'R', self.tcp_snd_seq, self.tcp_snd_ack)
         
     def send_rst_ack(self):
-        if (self.tcp_snd_seq == 0):
-            window = 0
-        else:
-            window = self.tcp_snd_window()
-
-        tcp_packet = scapy.all.TCP(sport = self.tcp_dport
-                                 , dport = self.tcp_sport
-                                 , seq = self.tcp_snd_seq
-                                 , ack = self.tcp_rcv_seq() + self.tcp_rcv_len() 
-                                 , options = self.tcp_snd_options()
-                                 , window = window
-                                 , flags = 'RA')
-
-        self.send_packet(tcp_packet)
+        self.send_tcp_packet(flags = 'RA')
         self.remove_connection()
-        self.log_packet('sent', self.dst_ip, self.tcp_dport, self.src_ip, self.tcp_sport
-                        , 'RA', self.tcp_snd_seq, self.tcp_snd_ack)
-        
 
     def send_syn_ack(self):
         """
@@ -454,6 +418,6 @@ class Tcp(handler.ip.Ip):
         if description:
             direction += ' ' + description
 
-        self.send_packet(tcp_packet)
+        self.send_ip_packet(tcp_packet)
         self.log_packet(direction, self.dst_ip, tcp_packet.dport, self.src_ip, tcp_packet.sport
                                  , tcp_packet.flags, tcp_packet.seq, tcp_packet.ack)
