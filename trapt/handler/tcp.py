@@ -360,11 +360,8 @@ class Tcp(handler.ip.Ip):
             len = len(frame[scapy.all.Raw].load)
 
         # SYN and FIN count as a byte for purposes of acknowledging
-        if (self.has_tcp_rcv_flags_S()):
-            len += 1
-
-        if (self.has_tcp_rcv_flags_F()):
-            len += 1
+        len += self.has_tcp_rcv_flags_S()
+        len += self.has_tcp_rcv_flags_F()
 
         return len
 
